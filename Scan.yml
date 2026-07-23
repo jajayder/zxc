@@ -27,7 +27,7 @@
   tasks:
     - name: DNS
       delegate_to: localhost
-      shell: "dig -x {{ inventory_hostname }} +short | sed 's/\.$//'"
+      shell: 'dig -x {{ inventory_hostname }} +short | sed "s/\.$//"'
       register: dns_name
       failed_when: false
 
