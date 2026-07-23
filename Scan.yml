@@ -3,16 +3,13 @@
   gather_facts: false
 
   vars:
-    subnet: "10.83.107"
+    subnet: "10.83.107.0/24"
 
   tasks:
 
     - name: Scan VLAN
       shell: |
-        for i in $(seq 1 254)
-        do
-          ping -c 1 -W 1 {{ subnet }}.$i >/dev/null 2>&1 && echo {{ subnet }}.$i
-        done
+        nmap -sn "{{ subnet }}" -oG - | awk '/Up$/{print $w}'
       register: hosts_encontrados
 
     - name: Criar inventário dinâmico
@@ -27,22 +24,16 @@
 
   tasks:
 
-    - name: Resolver hostname
-      delegate_to: localhost
-      shell: "nslookup {{ inventory_hostname }} | grep 'name =' | awk '{print $4}' | sed 's/.$//'"
-      register: dns_name
-      failed_when: false
-
-    - name: Verificar SSH
+    - name: Testa SSH
       delegate_to: localhost
       wait_for:
         host: "{{ inventory_hostname }}"
-        port: 22
+        port: 22 
         timeout: 2
       register: ssh_test
       ignore_errors: true
 
-    - name: Verificar WinRM
+    - name: Testa SSH
       delegate_to: localhost
       wait_for:
         host: "{{ inventory_hostname }}"
@@ -51,35 +42,84 @@
       register: winrm_test
       ignore_errors: true
 
-    - name: Classificar sistema operacional
-      set_fact:
-        os_type: >-
-          {% if ssh_test.failed == false %}
-          Linux
-          {% elif winrm_test.failed == false %}
-          Windows
-          {% else %}
-          Desconhecido
-          {% endif %}
+    - name: Add Linux ao inventario
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: linux_hosts
+      when: ssh_test.failed == false
 
-    - name: Criar lista consolidada
-      set_fact:
-        inventory_record:
-          hostname: "{{ dns_name.stdout | default('Nao_Resolvido') }}"
-          ip: "{{ inventory_hostname }}"
-          os: "{{ os_type }}"
-          
-- name: Exportar CSV
-  hosts: localhost
-  gather_facts: false
+    - name: Add Windoww ao inventario
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: win_hosts
+      when: winrm_test.failed == false
+        
+- name: Invent Linux
+  hosts: linux_hosts
+  gather_facts: true
+
+  vars:
 
   tasks:
+    - name: Get infos
+      set_fact:
+        inventory_data:
+          hostname: "{{ ansible_hostname }}"
+          fqdn: "{{ ansible_fqdn }}"
+          ip: "{{ ansible_default_ipva4.address }}"
+          mac: "{{ ansible_default_ipva4.macaddress }}"
+          os: "{{ ansible_distribution }}"
+          os_versao: "{{ ansible_distribution_version }}"
+          cpu: "{{ ansible_processor_vcpus }}"
+          memoria: "{{ ansible_memtotal_mb }}"
+          fabricante: "{{ ansible_system_vendor }}"
+          modelo: "{{ ansible_product_name }}"
+          serial: "{{ ansible_product_serial }}"
+          domais: "{{ ansible_domain }}"
 
-    - name: Criar arquivo CSV
-      copy:
-        dest: /files/inventario_vlan.csv
-        content: |
-          Hostname,IP,SO
-          {% for host in groups['discovered'] %}
-          {{ hostvars[host].inventory_record.hostname }},{{ hostvars[host].inventory_record.ip }},{{ hostvars[host].inventory_record.os }}
-          {% endfor %}
+
+- name: Invent Windos
+  hosts: win_hosts
+  gather_facts: true
+
+  vars:
+    ansible_connection: winrm
+    ansible_winrm_transport: ntlm
+    ansible_port: 5895
+
+  tasks:
+    - name: Get infos Win
+      set_fact:
+        inventory_data:
+          hostname: "{{ ansible_hostname }}"
+          fqdn: "{{ ansible_fqdn }}"
+          ip: "{{ ansible_default_ipva4.address }}"
+          mac: "{{ ansible_default_ipva4.macaddress }}"
+          os: "{{ ansible_distribution }}"
+          os_versao: "{{ ansible_distribution_version }}"
+          cpu: "{{ ansible_processor_vcpus }}"
+          memoria: "{{ ansible_memtotal_mb }}"
+          fabricante: "{{ ansible_system_vendor }}"
+          modelo: "{{ ansible_product_name }}"
+          serial: "{{ ansible_product_serial }}"
+          domais: "{{ ansible_domain }}"
+
+- name: Criando CSV
+  copy:
+    dest: files/invent_hosts.csv
+    content: |
+      hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
+      {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
+      {{ hostvars[host].inventory_data.hostname }},
+      {{ hostvars[host].inventory_data.fqdn }},
+      {{ hostvars[host].inventory_data.ip }},
+      {{ hostvars[host].inventory_data.mac }},
+      {{ hostvars[host].inventory_data.os }},
+      {{ hostvars[host].inventory_data.os_versao }},
+      {{ hostvars[host].inventory_data.cpu }},
+      {{ hostvars[host].inventory_data.memoria }},
+      {{ hostvars[host].inventory_data.fabricante }},
+      {{ hostvars[host].inventory_data.modelo }},
+      {{ hostvars[host].inventory_data.serial }},
+      {{ hostvars[host].inventory_data.domais }}
+      {% endfor %}
