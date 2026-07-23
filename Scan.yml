@@ -21,7 +21,7 @@
       loop: "{{ hosts_encontrados.stdout_lines }}"
 
 
-    - name: Criar inventário dinâmico
+    - name: listando hosts encontrados
       debug:
         msg: "Host descoberto: {{ item }}"
       loop: "{{ hosts_encontrados.stdout_lines }}"      
