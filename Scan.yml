@@ -112,8 +112,7 @@
   gather_facts: true
 
   tasks:
-    - name: Criando CSV
-      copy:
+    - copy:
         dest: files/invent_hosts.csv
         content: |
           hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
