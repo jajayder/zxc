@@ -20,6 +20,22 @@
         groups: discovered
       loop: "{{ hosts_encontrados.stdout_lines }}"
 
+- name: resolvendo nome
+  hosts: hosts_encontrados
+  gather_facts: true
+
+  tasks:
+    - name: DNS
+      delegate_to: localhost
+      shell: "dig -x {{ inventory_hostname }} +short | sed 's/\.$//'"
+      register: dns_name
+      failed_when: false
+
+    - name: salvando hostname
+      set_fact:
+        discovered_hostname: "{{ dns_name.stdout | default(inventory_hostname) }}"
+
+
 
 - name: Identificar hosts
   hosts: discovered
@@ -27,62 +43,50 @@
 
   tasks:
 
-    - name: Testa SSH
-      delegate_to: localhost
-      wait_for:
-        host: "{{ inventory_hostname }}"
-        port: 22 
-        timeout: 2
-      register: ssh_test
-      ignore_errors: true
-
-    - name: Testa SSH
+    - name: Testa Winrm
       delegate_to: localhost
       wait_for:
         host: "{{ inventory_hostname }}"
         port: 5985
         timeout: 2
       register: winrm_test
-      ignore_errors: true
+      ignore_errors: yes
 
-    - name: Add Linux ao inventario
+    - name: Add Win
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: windows_hosts
+      when: not winrm_test.failed
+
+    - name: Add candidatos linus
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: linux_cand
+      when: winrm_test.failed
+
+- name: Linux Detect
+  hosts: linux_cand
+  gather_facts: false
+
+  tasks:
+
+    - name: SSH test
+      delegate_to: localhost
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        post: 22
+        timeout: 3
+      register: ssh_test
+      ignore_errors: yes
+
+    - name: Adicionando Linux
       add_host:
         name: "{{ inventory_hostname }}"
         groups: linux_hosts
-      when: ssh_test.failed == false
+      when: not ssh_test.failed        
 
-    - name: Add Windoww ao inventario
-      add_host:
-        name: "{{ inventory_hostname }}"
-        groups: win_hosts
-      when: winrm_test.failed == false
-        
-- name: Invent Linux
-  hosts: linux_hosts
-  gather_facts: true
-
-  vars:
-
-  tasks:
-    - name: Get infos
-      set_fact:
-        inventory_data:
-          hostname: "{{ ansible_hostname }}"
-          fqdn: "{{ ansible_fqdn }}"
-          ip: "{{ ansible_default_ipva4.address }}"
-          mac: "{{ ansible_default_ipva4.macaddress }}"
-          os: "{{ ansible_distribution }}"
-          os_versao: "{{ ansible_distribution_version }}"
-          cpu: "{{ ansible_processor_vcpus }}"
-          memoria: "{{ ansible_memtotal_mb }}"
-          fabricante: "{{ ansible_system_vendor }}"
-          modelo: "{{ ansible_product_name }}"
-          serial: "{{ ansible_product_serial }}"
-          domais: "{{ ansible_domain }}"
-
-
-- name: Invent Windos
-  hosts: win_hosts
+- name: Inventario Windows
+  host: windows_hosts
   gather_facts: true
 
   vars:
@@ -91,9 +95,10 @@
     ansible_port: 5895
 
   tasks:
-    - name: Get infos Win
+
+    - name: Monstar Inventario Windows
       set_fact:
-        inventory_data:
+        inventario:
           hostname: "{{ ansible_hostname }}"
           fqdn: "{{ ansible_fqdn }}"
           ip: "{{ ansible_default_ipva4.address }}"
@@ -105,11 +110,33 @@
           fabricante: "{{ ansible_system_vendor }}"
           modelo: "{{ ansible_product_name }}"
           serial: "{{ ansible_product_serial }}"
-          domais: "{{ ansible_domain }}"
+          domain: "{{ ansible_domain }}"
+
+- name: Inventario Linux
+  host: linux_hosts
+  gather_facts: true
+
+  tasks:
+
+    - name: Monstar Inventario Windows
+      set_fact:
+        inventario:
+          hostname: "{{ ansible_hostname }}"
+          fqdn: "{{ ansible_fqdn }}"
+          ip: "{{ ansible_default_ipva4.address }}"
+          mac: "{{ ansible_default_ipva4.macaddress }}"
+          os: "{{ ansible_distribution }}"
+          os_versao: "{{ ansible_distribution_version }}"
+          cpu: "{{ ansible_processor_vcpus }}"
+          memoria: "{{ ansible_memtotal_mb }}"
+          fabricante: "{{ ansible_system_vendor }}"
+          modelo: "{{ ansible_product_name }}"
+          serial: "{{ ansible_product_serial }}"
+          domain: "{{ ansible_domain }}"
 
 - name: CSV
   hosts: localhost
-  gather_facts: true
+  gather_facts: false
 
   tasks:
     - copy:
