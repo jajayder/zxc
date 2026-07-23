@@ -143,7 +143,7 @@
         dest: /files/invent_hosts.csv
         content: |
           hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domain
-          {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
+          {% for host in groups.get('linux_hosts',[]) + groups.get('windows_hosts',[]) %}
           {{ hostvars[host].inventario.hostname }},
           {{ hostvars[host].inventario.fqdn }},
           {{ hostvars[host].inventario.ip }},
