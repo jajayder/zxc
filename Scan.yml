@@ -140,23 +140,23 @@
 
   tasks:
     - name: monta csv
-        set_fact:
-          csv_content: |
-            hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domain
-            {% for host in groups.get('linux_hosts',[]) + groups.get('windows_hosts',[]) %}
-            {{ hostvars[host].inventario.hostname }},
-            {{ hostvars[host].inventario.fqdn }},
-            {{ hostvars[host].inventario.ip }},
-            {{ hostvars[host].inventario.mac }},
-            {{ hostvars[host].inventario.os }},
-            {{ hostvars[host].inventario.os_versao }},
-            {{ hostvars[host].inventario.cpu }},
-            {{ hostvars[host].inventario.memoria }},
-            {{ hostvars[host].inventario.fabricante }},
-            {{ hostvars[host].inventario.modelo }},
-            {{ hostvars[host].inventario.serial }},
-            {{ hostvars[host].inventario.domais }}
-            {% endfor %}
+      set_fact:
+        csv_content: |
+          hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domain
+          {% for host in groups.get('linux_hosts',[]) + groups.get('windows_hosts',[]) %}
+          {{ hostvars[host].inventario.hostname }},
+          {{ hostvars[host].inventario.fqdn }},
+          {{ hostvars[host].inventario.ip }},
+          {{ hostvars[host].inventario.mac }},
+          {{ hostvars[host].inventario.os }},
+          {{ hostvars[host].inventario.os_versao }},
+          {{ hostvars[host].inventario.cpu }},
+          {{ hostvars[host].inventario.memoria }},
+          {{ hostvars[host].inventario.fabricante }},
+          {{ hostvars[host].inventario.modelo }},
+          {{ hostvars[host].inventario.serial }},
+          {{ hostvars[host].inventario.domais }}
+          {% endfor %}
 
     - name: exibir csv
       debug:
