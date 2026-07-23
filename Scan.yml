@@ -140,7 +140,7 @@
 
   tasks:
     - copy:
-        dest: /files/invent_hosts.csv
+        dest: /invent_hosts.csv
         content: |
           hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domain
           {% for host in groups.get('linux_hosts',[]) + groups.get('windows_hosts',[]) %}
