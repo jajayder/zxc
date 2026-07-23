@@ -1,0 +1,85 @@
+- name: Descobrir hosts na VLAN
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    subnet: "10.83.107"
+
+  tasks:
+
+    - name: Scan VLAN
+      shell: |
+        for i in $(seq 1 254)
+        do
+          ping -c 1 -W 1 {{ subnet }}.$i >/dev/null 2>&1 && echo {{ subnet }}.$i
+        done
+      register: hosts_encontrados
+
+    - name: Criar inventário dinâmico
+      add_host:
+        name: "{{ item }}"
+        groups: discovered
+      loop: "{{ hosts_encontrados.stdout_lines }}"
+      
+- name: Identificar hosts
+  hosts: discovered
+  gather_facts: false
+
+  tasks:
+
+    - name: Resolver hostname
+      delegate_to: localhost
+      shell: "nslookup {{ inventory_hostname }} | grep 'name =' | awk '{print $4}' | sed 's/.$//'"
+      register: dns_name
+      failed_when: false
+
+    - name: Verificar SSH
+      delegate_to: localhost
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22
+        timeout: 2
+      register: ssh_test
+      ignore_errors: true
+
+    - name: Verificar WinRM
+      delegate_to: localhost
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 5985
+        timeout: 2
+      register: winrm_test
+      ignore_errors: true
+
+    - name: Classificar sistema operacional
+      set_fact:
+        os_type: >-
+          {% if ssh_test.failed == false %}
+          Linux
+          {% elif winrm_test.failed == false %}
+          Windows
+          {% else %}
+          Desconhecido
+          {% endif %}
+
+    - name: Criar lista consolidada
+      set_fact:
+        inventory_record:
+          hostname: "{{ dns_name.stdout | default('Nao_Resolvido') }}"
+          ip: "{{ inventory_hostname }}"
+          os: "{{ os_type }}"
+          
+- name: Exportar CSV
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+
+    - name: Criar arquivo CSV
+      copy:
+        dest: /files/inventario_vlan.csv
+        content: |
+          Hostname,IP,SO
+          {% for host in groups['discovered'] %}
+          {{ hostvars[host].inventory_record.hostname }},{{ hostvars[host].inventory_record.ip }},{{ hostvars[host].inventory_record.os }}
+          {% endfor %}
