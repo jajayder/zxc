@@ -18,5 +18,10 @@
       add_host:
         name: "{{ item }}"
         groups: discovered
-      debug: "{{ item }}"
       loop: "{{ hosts_encontrados.stdout_lines }}"
+
+
+    - name: Criar inventário dinâmico
+      debug:
+        msg: "Host descoberto: {{ item }}"
+      loop: "{{ hosts_encontrados.stdout_lines }}"      
