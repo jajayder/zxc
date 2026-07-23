@@ -9,12 +9,14 @@
 
     - name: Scan VLAN
       shell: |
-        nmap -sn "{{ subnet }}" -oG - | awk '/Up$/{print $2}'
+        nmap -sn {{ subnet }} -oG - 2>/dev/null | awk '/Up$/{print $2}'
       register: hosts_encontrados
+      changed_when: false
+      failed_when: false
 
     - name: Criar inventário dinâmico
       add_host:
         name: "{{ item }}"
         groups: discovered
-        debug: "{{ item }}"
+      debug: "{{ item }}"
       loop: "{{ hosts_encontrados.stdout_lines }}"
