@@ -104,22 +104,27 @@
           serial: "{{ ansible_product_serial }}"
           domais: "{{ ansible_domain }}"
 
-- name: Criando CSV
-  copy:
-    dest: files/invent_hosts.csv
-    content: |
-      hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
-      {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
-      {{ hostvars[host].inventory_data.hostname }},
-      {{ hostvars[host].inventory_data.fqdn }},
-      {{ hostvars[host].inventory_data.ip }},
-      {{ hostvars[host].inventory_data.mac }},
-      {{ hostvars[host].inventory_data.os }},
-      {{ hostvars[host].inventory_data.os_versao }},
-      {{ hostvars[host].inventory_data.cpu }},
-      {{ hostvars[host].inventory_data.memoria }},
-      {{ hostvars[host].inventory_data.fabricante }},
-      {{ hostvars[host].inventory_data.modelo }},
-      {{ hostvars[host].inventory_data.serial }},
-      {{ hostvars[host].inventory_data.domais }}
-      {% endfor %}
+- name: CSV
+  hosts: localhost
+  gather_facts: true
+
+  tasks:
+    - name: Criando CSV
+      copy:
+        dest: files/invent_hosts.csv
+        content: |
+          hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
+          {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
+          {{ hostvars[host].inventory_data.hostname }},
+          {{ hostvars[host].inventory_data.fqdn }},
+          {{ hostvars[host].inventory_data.ip }},
+          {{ hostvars[host].inventory_data.mac }},
+          {{ hostvars[host].inventory_data.os }},
+          {{ hostvars[host].inventory_data.os_versao }},
+          {{ hostvars[host].inventory_data.cpu }},
+          {{ hostvars[host].inventory_data.memoria }},
+          {{ hostvars[host].inventory_data.fabricante }},
+          {{ hostvars[host].inventory_data.modelo }},
+          {{ hostvars[host].inventory_data.serial }},
+          {{ hostvars[host].inventory_data.domais }}
+          {% endfor %}
