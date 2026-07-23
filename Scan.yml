@@ -1,5 +1,5 @@
 - name: Descobrir hosts na VLAN
-  hosts: all
+  hosts: localhost
   gather_facts: false
 
   vars:
