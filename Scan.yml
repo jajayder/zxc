@@ -113,7 +113,7 @@
 
   tasks:
     - copy:
-        dest: files/invent_hosts.csv
+        dest: /files/invent_hosts.csv
         content: |
           hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
           {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
