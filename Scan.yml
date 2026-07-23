@@ -86,7 +86,7 @@
       when: not ssh_test.failed        
 
 - name: Inventario Windows
-  host: windows_hosts
+  hosts: windows_hosts
   gather_facts: true
 
   vars:
@@ -113,7 +113,7 @@
           domain: "{{ ansible_domain }}"
 
 - name: Inventario Linux
-  host: linux_hosts
+  hosts: linux_hosts
   gather_facts: true
 
   tasks:
@@ -144,16 +144,16 @@
         content: |
           hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
           {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
-          {{ hostvars[host].inventory_data.hostname }},
-          {{ hostvars[host].inventory_data.fqdn }},
-          {{ hostvars[host].inventory_data.ip }},
-          {{ hostvars[host].inventory_data.mac }},
-          {{ hostvars[host].inventory_data.os }},
-          {{ hostvars[host].inventory_data.os_versao }},
-          {{ hostvars[host].inventory_data.cpu }},
-          {{ hostvars[host].inventory_data.memoria }},
-          {{ hostvars[host].inventory_data.fabricante }},
-          {{ hostvars[host].inventory_data.modelo }},
-          {{ hostvars[host].inventory_data.serial }},
-          {{ hostvars[host].inventory_data.domais }}
+          {{ hostvars[host].inventario.hostname }},
+          {{ hostvars[host].inventario.fqdn }},
+          {{ hostvars[host].inventario.ip }},
+          {{ hostvars[host].inventario.mac }},
+          {{ hostvars[host].inventario.os }},
+          {{ hostvars[host].inventario.os_versao }},
+          {{ hostvars[host].inventario.cpu }},
+          {{ hostvars[host].inventario.memoria }},
+          {{ hostvars[host].inventario.fabricante }},
+          {{ hostvars[host].inventario.modelo }},
+          {{ hostvars[host].inventario.serial }},
+          {{ hostvars[host].inventario.domais }}
           {% endfor %}
