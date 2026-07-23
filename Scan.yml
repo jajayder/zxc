@@ -21,7 +21,113 @@
       loop: "{{ hosts_encontrados.stdout_lines }}"
 
 
-    - name: listando hosts encontrados
-      debug:
-        msg: "Host descoberto: {{ item }}"
-      loop: "{{ hosts_encontrados.stdout_lines }}"      
+- name: Identificar hosts
+  hosts: discovered
+  gather_facts: false
+
+  tasks:
+
+    - name: Testa SSH
+      delegate_to: localhost
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 22 
+        timeout: 2
+      register: ssh_test
+      ignore_errors: true
+
+    - name: Testa SSH
+      delegate_to: localhost
+      wait_for:
+        host: "{{ inventory_hostname }}"
+        port: 5985
+        timeout: 2
+      register: winrm_test
+      ignore_errors: true
+
+    - name: Add Linux ao inventario
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: linux_hosts
+      when: ssh_test.failed == false
+
+    - name: Add Windoww ao inventario
+      add_host:
+        name: "{{ inventory_hostname }}"
+        groups: win_hosts
+      when: winrm_test.failed == false
+        
+- name: Invent Linux
+  hosts: linux_hosts
+  gather_facts: true
+
+  vars:
+
+  tasks:
+    - name: Get infos
+      set_fact:
+        inventory_data:
+          hostname: "{{ ansible_hostname }}"
+          fqdn: "{{ ansible_fqdn }}"
+          ip: "{{ ansible_default_ipva4.address }}"
+          mac: "{{ ansible_default_ipva4.macaddress }}"
+          os: "{{ ansible_distribution }}"
+          os_versao: "{{ ansible_distribution_version }}"
+          cpu: "{{ ansible_processor_vcpus }}"
+          memoria: "{{ ansible_memtotal_mb }}"
+          fabricante: "{{ ansible_system_vendor }}"
+          modelo: "{{ ansible_product_name }}"
+          serial: "{{ ansible_product_serial }}"
+          domais: "{{ ansible_domain }}"
+
+
+- name: Invent Windos
+  hosts: win_hosts
+  gather_facts: true
+
+  vars:
+    ansible_connection: winrm
+    ansible_winrm_transport: ntlm
+    ansible_port: 5895
+
+  tasks:
+    - name: Get infos Win
+      set_fact:
+        inventory_data:
+          hostname: "{{ ansible_hostname }}"
+          fqdn: "{{ ansible_fqdn }}"
+          ip: "{{ ansible_default_ipva4.address }}"
+          mac: "{{ ansible_default_ipva4.macaddress }}"
+          os: "{{ ansible_distribution }}"
+          os_versao: "{{ ansible_distribution_version }}"
+          cpu: "{{ ansible_processor_vcpus }}"
+          memoria: "{{ ansible_memtotal_mb }}"
+          fabricante: "{{ ansible_system_vendor }}"
+          modelo: "{{ ansible_product_name }}"
+          serial: "{{ ansible_product_serial }}"
+          domais: "{{ ansible_domain }}"
+
+- name: CSV
+  hosts: localhost
+  gather_facts: true
+
+  tasks:
+    - name: Criando CSV
+      copy:
+        dest: files/invent_hosts.csv
+        content: |
+          hostname,fqdn,ip,mac,os,os_versao,cpu,memoria,fabricante,modelo,serial,domais
+          {% for host in groups['linux_hosts'] + groups['win_hosts'] %}
+          {{ hostvars[host].inventory_data.hostname }},
+          {{ hostvars[host].inventory_data.fqdn }},
+          {{ hostvars[host].inventory_data.ip }},
+          {{ hostvars[host].inventory_data.mac }},
+          {{ hostvars[host].inventory_data.os }},
+          {{ hostvars[host].inventory_data.os_versao }},
+          {{ hostvars[host].inventory_data.cpu }},
+          {{ hostvars[host].inventory_data.memoria }},
+          {{ hostvars[host].inventory_data.fabricante }},
+          {{ hostvars[host].inventory_data.modelo }},
+          {{ hostvars[host].inventory_data.serial }},
+          {{ hostvars[host].inventory_data.domais }}
+          {% endfor %}
