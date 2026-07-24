@@ -9,10 +9,12 @@
 
     - name: Scan VLAN
       shell: |
-        nmap -sn {{ subnet }} -oG - 2>/dev/null | awk '/Up$/{print $2}'
+        for i in $(seq 1 254)
+        do
+          ping -c 1 -W 1 {{ subnet }}.$1 >/dev/null 2>&1 && echo {{ subnet }}.$i
+        done
+#        nmap -sn {{ subnet }} -oG - 2>/dev/null | awk '/Up$/{print $2}'
       register: hosts_encontrados
-      changed_when: false
-      failed_when: false
 
     - name: Criar inventário dinâmico
       add_host:
