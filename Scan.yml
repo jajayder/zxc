@@ -3,7 +3,7 @@
   gather_facts: false
 
   vars:
-    subnet: "10.83.107.0/24"
+    subnet: "10.83.107"
 
   tasks:
 
