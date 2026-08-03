@@ -1,8 +1,13 @@
-- name: Delete Pod (force)
-  kubernetes.core.k8s:
-    state: absent
-    kind: Pod
-    name: "{{ var_namepod }}"
-    namespace: "{{ var_namespace }}"
-    grace_period: 0
-    force: true
+- name: Deletando pods
+  hosts: localhost
+  gather_facts: false
+  
+  tasks:
+    - name: Delete Pod (force)
+      kubernetes.core.k8s:
+        state: absent
+        kind: Pod
+        name: "{{ var_namepod }}"
+        namespace: "{{ var_namespace }}"
+        grace_period: 0
+        force: true
