@@ -9,5 +9,5 @@
         kind: Pod
         name: "{{ var_namepod }}"
         namespace: "{{ var_namespace }}"
-        grace_period: 0
-        force: true
+        delete_options:
+          gracePeriodSeconds: 0
