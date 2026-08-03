@@ -1,6 +1,9 @@
 - name: Deletando pods
   hosts: localhost
   gather_facts: false
+
+  collections: 
+    - kubernetes.core
   
   tasks:
     - name: Delete Pod (force)
