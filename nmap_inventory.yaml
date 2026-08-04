@@ -1,7 +1,27 @@
+---
+# Plugin de Inventario Dinamico Nmap
 plugin: community.general.nmap
+
+# Range da sua rede
 address: 10.83.102.0/24
-strict: False
-ipv4: True
-ports: False
+
+# Forcar o uso de IPv4
+ipv4: true
+ipv6: false
+
+# Nao falhar a execucao caso nao encontre hosts
+strict: false
+
+# Escanear portas especificas para identificar hosts ativos (SSH / WinRM / Ping)
+ports: true
+port_specs: "22,80,443,5985"
+
+# Agrupar hosts descobertos no inventario por status e portas abertas
+keyed_groups:
+  - key: nmap_open_ports
+    prefix: port
+  - key: nmap_state
+    prefix: state
 groups:
   ativos: "ansible_host is defined"
+
