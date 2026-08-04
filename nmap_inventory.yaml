@@ -1,27 +1,50 @@
+- name: Varrer rede e registrar hosts no AWX
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Executar varredura Nmap no range IP
+      community.general.nmap:
+        address: "10.83.102.0/24"
+        ports: "22"
+      register: nmap_result
+
+    - name: Adicionar hosts ativos no inventario do AWX
+      awx.awx.host:
+        name: "{{ item }}"
+        inventory: "NMAP Inventory"
+        state: present
+        enabled: true
+        variables:
+          ansible_host: "{{ item }}"
+          discovered_by: "nmap_sweep"
+      loop: "{{ nmap_result.nmap_hosts }}"
+      when: nmap_result.nmap_hosts is defined
+
 ---
 # Plugin de Inventario Dinamico Nmap
-plugin: community.general.nmap
+#plugin: community.general.nmap
 
 # Range da sua rede
-address: 10.83.102.0/24
+#address: 10.83.102.0/24
 
 # Forcar o uso de IPv4
-ipv4: true
-ipv6: false
+#ipv4: true
+#ipv6: false
 
 # Nao falhar a execucao caso nao encontre hosts
 # strict: false
 
 # Escanear portas especificas para identificar hosts ativos (SSH / WinRM / Ping)
-ports: true
-port_specs: "22,80,443,5985"
+#ports: true
+#port_specs: "22,80,443,5985"
 
 # Agrupar hosts descobertos no inventario por status e portas abertas
-keyed_groups:
-  - key: nmap_open_ports
-    prefix: port
-  - key: nmap_state
-    prefix: state
-groups:
-  ativos: "ansible_host is defined"
+#keyed_groups:
+#  - key: nmap_open_ports
+#    prefix: port
+#  - key: nmap_state
+#    prefix: state
+#groups:
+#  ativos: "ansible_host is defined"
 
