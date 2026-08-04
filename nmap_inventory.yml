@@ -1,0 +1,7 @@
+plugin: community.general.nmap
+address: 10.83.107.0/24
+strict: False
+ipv4: True
+ports: False
+groups:
+  ativos: "ansible_host is defined"
