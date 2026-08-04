@@ -10,7 +10,7 @@ ipv4: true
 ipv6: false
 
 # Nao falhar a execucao caso nao encontre hosts
-strict: false
+# strict: false
 
 # Escanear portas especificas para identificar hosts ativos (SSH / WinRM / Ping)
 ports: true
