@@ -21,7 +21,7 @@
       loop: "{{ nmap_result.nmap_hosts }}"
       when: nmap_result.nmap_hosts is defined
 
----
+
 # Plugin de Inventario Dinamico Nmap
 #plugin: community.general.nmap
 
