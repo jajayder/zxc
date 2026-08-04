@@ -2,7 +2,8 @@
   hosts: localhost
   gather_facts: false
 
-  collections: bagre.ipam
+  collections: 
+    - bagre.ipam
 
   tasks:
     - name: Descobre o próximo IP livre
