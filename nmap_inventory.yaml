@@ -1,5 +1,5 @@
 plugin: community.general.nmap
-address: 10.83.107.0/24
+address: 10.83.102.0/24
 strict: False
 ipv4: True
 ports: False
