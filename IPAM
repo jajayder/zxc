@@ -1,0 +1,15 @@
+- name: IPAM
+  hosts: localhost
+  gather_facts: false
+
+  collections: bagre.ipam
+
+  tasks:
+    - name: Descobre o próximo IP livre
+      bagre.ipam.next_free_ip:
+        subnet_cidr: 10.83.102.0/24
+      register: livre
+
+    - name: debug
+      debug:
+        msg: "{{ livre }}"
