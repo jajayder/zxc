@@ -9,7 +9,7 @@
     - name: Descobre o próximo IP livre
       bagre.ipam.next_free_ip:
         endpoint: https://ipam.example.com
-        token: "{{ bagre_token }}"
+        token: 
         subnet_cidr: 10.83.102.0/24
       register: livre
     
