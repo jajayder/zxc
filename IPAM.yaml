@@ -8,11 +8,22 @@
   tasks:
     - name: Descobre o próximo IP livre
       bagre.ipam.next_free_ip:
-        endpoint: "{{ BAGRE_ENDPOINT }}"
+        endpoint: https://ipam.example.com
         token: "{{ bagre_token }}"
         subnet_cidr: 10.83.102.0/24
       register: livre
-
-    - name: debug
-      debug:
-        msg: "{{ livre }}"
+    
+    - name: Mostra o IP
+      ansible.builtin.debug:
+        msg: "Próximo IP livre: {{ livre.ip.address }}"
+    
+#    - name: Descobre o próximo IP livre
+#      bagre.ipam.next_free_ip:
+#        endpoint: "{{ BAGRE_ENDPOINT }}"
+#        token: "{{ bagre_token }}"
+#        subnet_cidr: 10.83.102.0/24
+#      register: livre
+#
+#    - name: debug
+#      debug:
+#        msg: "{{ livre }}"
