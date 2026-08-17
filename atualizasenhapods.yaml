@@ -45,7 +45,7 @@
       set_fact:
         application_accounts: "{{ application_accounts }}"
       delegate_facts: true
-      delegate_to: scl.corp
+      delegate_to: 10.83.23.26
 
 - name: Processar contas no AD
   hosts: 10.83.23.26
@@ -87,7 +87,7 @@
             DaysLeft = $DaysLeft
           } | ConvertTo-Json
 
-      loop: "{{ application_accounts }}"
+      loop: "{{ hostvars[10.83.23.26].application_accounts }}"
       register: dataexpirasenha_ad
    
     - name: Inicializar lista
