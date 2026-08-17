@@ -1,0 +1,190 @@
+- name: Buscar contas em Secrets
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+
+    - name: Buscar secrets
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        all_namespaces: true
+      register: secret_data
+    
+    - name: Inicializar lista
+      set_fact:
+        application_accounts: []
+
+    - name: Extrair username e password
+      set_fact:
+        application_accounts: >-
+          {{
+            application_accounts +
+            [
+              {
+                'namespace': item.metadata.namespace,
+                'secret_name': item.metadata.name,
+                'username': item.data.username | b64decode | trim,
+                'password': item.data.password | b64decode | trim
+              }
+            ]
+          }}
+      loop: "{{ secret_data.resources }}"
+      when:
+        - item.data is defined
+        - "'username' in item.data"
+        - "'password' in item.data"
+        - (item.data.username | b64decode) is match(applications_prefix)
+
+    - name: Compartilhar lista
+      set_fact:
+        application_accounts: "{{ aplic_users }}"
+      delegate_facts: true
+      delegate_to: scl.corp
+
+- name: Processar contas no AD
+  hosts: scl.corp
+  gather_facts: false
+
+  tasks:
+
+    - name: Inicializar relatório
+      set_fact:
+        rotated_accounts: []
+
+    - name: Consultar usuários
+      ansible.windows.win_powershell:
+        script: |
+
+          Import-Module ActiveDirectory
+
+          $UserName = "{{ item.username }}"
+
+          $User = Get-ADUser `
+            -Identity $UserName `
+            -Properties PasswordLastSet
+
+          $Policy = Get-ADUserResultantPasswordPolicy $User
+
+          $ExpireDate =
+            $User.PasswordLastSet.AddDays(
+              $Policy.MaxPasswordAge.TotalDays
+            )
+
+          $DaysLeft =
+            :Floor(
+              ($ExpireDate - (Get-Date)).TotalDays
+            )
+
+          @{
+            Username = $UserName
+            ExpireDate = $ExpireDate
+            DaysLeft = $DaysLeft
+          } | ConvertTo-Json
+
+      loop: "{{ aplic_users }}"
+      register: dataexpirasenha_ad
+   
+    - name: Inicializar lista
+      set_fact:
+        accounts_to_rotate: []
+
+    - name: Filtrar expiração <= 5 dias
+      set_fact:
+        accounts_to_rotate: >-
+          {{
+            accounts_to_rotate +
+            [
+              item.item |
+              combine(
+                {
+                  'days_left':
+                  (item.output[0].DaysLeft|int),
+
+                  'expiration':
+                  item.output[0].ExpireDate
+                }
+              )
+            ]
+          }}
+      loop: "{{ dataexpirasenha_ad.results }}"
+      when:
+        - item.output[0].DaysLeft | int <= 5
+
+    - name: Filtrar expiração <= 5 dias
+      set_fact:
+        accounts_to_rotate: >-
+          {{
+            accounts_to_rotate + [
+              {
+                'username': item.item.username,
+                'namespace': item.item.namespace,
+                'secret_name': item.item.secret_name,
+                'expiration_date': item.output[0].ExpireDate,
+                'days_left': item.output[0].DaysLeft | int
+              }
+            ]
+          }}
+      loop: "{{ dataexpirasenha_ad.results }}"
+      when:
+        - item.output[0].DaysLeft | int <= 5
+
+    - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
+      debug:
+        msg:
+          - "Usuario: {{ item.username }}"
+          - "Namespace: {{ item.namespace }}"
+          - "Secret: {{ item. secret_name }}"
+          - "Expira em: {{ item.expiration_date }}"
+          - "Dias restantes: {{ item.days_left }}"
+      loop: "{{ accounts_to_rotate }}"
+    
+#     - name: Gerar senha
+#       set_fact:
+#         accounts_to_rotate_new: >-
+#           {{
+#             accounts_to_rotate_new|default([])
+#             +
+#             [
+#               item |
+#               combine(
+#                 {
+#                   'new_password':
+#                   lookup(
+#                     'password',
+#                     '/dev/null length=24'
+#                   )
+#                 }
+#               )
+#             ]
+#           }}
+#       loop: "{{ accounts_to_rotate }}"
+    
+#     - name: Trocar senha AD
+#       microsoft.ad.user:
+#         identity: "{{ item.username }}"
+#         password: "{{ item.new_password }}"
+#         update_password: always
+#         state: present
+#       loop: "{{ accounts_to_rotate_new }}"
+
+# - name: Atualizar OpenShift
+#   hosts: localhost
+#   gather_facts: false
+
+#   tasks:
+
+#     - name: Atualizar Secret
+#       kubernetes.core.k8s:
+#         state: present
+#         definition:
+#           apiVersion: v1
+#           kind: Secret
+#           metadata:
+#             namespace: "{{ item.namespace }}"
+#             name: "{{ item.secret_name }}"
+#           type: Opaque
+#           stringData:
+#             username: "{{ item.username }}"
+#             password: "{{ item.new_password }}"
+#       loop: "{{ hostvars['scl.corp'].rotated_accounts }}"
