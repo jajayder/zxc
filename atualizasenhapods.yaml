@@ -50,6 +50,9 @@
 - name: Processar contas no AD
   hosts: 10.83.23.26
   gather_facts: false
+  collections:
+    - ansible.windows
+    - microsoft.ad
 
   tasks:
 
