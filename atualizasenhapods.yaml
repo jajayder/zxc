@@ -87,7 +87,7 @@
             DaysLeft = $DaysLeft
           } | ConvertTo-Json
 
-      loop: "{{ hostvars[10.83.23.26].application_accounts }}"
+      loop: "{{ hostvars['10.83.23.26'].application_accounts }}"
       register: dataexpirasenha_ad
    
     - name: Inicializar lista
