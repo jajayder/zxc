@@ -48,7 +48,7 @@
       delegate_to: scl.corp
 
 - name: Processar contas no AD
-  hosts: scl.corp
+  hosts: 10.83.23.26
   gather_facts: false
 
   tasks:
