@@ -40,10 +40,6 @@
         - (item.data.username | b64decode) is match(applications_prefix)
       no_log: true
 
-     - name: Usuarios encontrados
-       debug:
-         var: application_accounts
-         
 #    - name: Compartilhar lista
 #      set_fact:
 #        application_accounts: "{{ application_accounts }}"
