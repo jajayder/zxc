@@ -79,8 +79,8 @@
           - "Usuario: {{ item.username }}"
           - "Namespace: {{ item.namespace }}"
           - "Secret: {{ item. secret_name }}"
-          - "Expira em: {{ item.expiration_date }}"
-          - "Dias restantes: {{ item.days_left }}"
+          - "Expira em: {{ item.ExpireDate }}"
+          - "Dias restantes: {{ item.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad }}"
    
     - name: Inicializar lista
