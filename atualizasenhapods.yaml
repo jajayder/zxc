@@ -67,7 +67,7 @@
           $cred: New-Object System.Management.Automation.PSCredential($usuario, $secpasswd)
           [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
-          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Credential $cred -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
+          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Credential $cred -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
           $DaysLeft = [Math]::Floor(($Expiradata - (Get-Date)).TotalDays)
           @{
             Username = "{{ item.username }}"
