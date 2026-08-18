@@ -45,10 +45,10 @@
       set_fact:
         application_accounts: "{{ application_accounts }}"
       delegate_facts: true
-      delegate_to: 10.83.23.26
+      delegate_to: scl.corp
 
 - name: Processar contas no AD
-  hosts: 10.83.23.26
+  hosts: scl.corp
   gather_facts: false
   collections:
     - ansible.windows
@@ -90,7 +90,7 @@
             DaysLeft = $DaysLeft
           } | ConvertTo-Json
 
-      loop: "{{ hostvars['10.83.23.26'].application_accounts }}"
+      loop: "{{ hostvars['scl.corp'].application_accounts }}"
       register: dataexpirasenha_ad
    
     - name: Inicializar lista
