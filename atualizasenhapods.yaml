@@ -63,11 +63,11 @@
       ansible.windows.win_powershell:
         script: |
           Import-Module ActiveDirectory
-          $dataUser =  [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
+          $Expiradata =  [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
           $DaysLeft = [Math]::Floor(($dataUser - (Get-Date)).TotalDays)
           @{
             Username = "{{ item.username }}"
-            ExpireDate = $dataUser
+            ExpireDate = $Expiradata.ToString("dd-MM-yyyy HH:mm:ss")
             DaysLeft = $DaysLeft
           } | ConvertTo-Json
       loop: "{{ application_accounts }}"
@@ -76,12 +76,15 @@
     - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
       debug:
         msg:
-          - "Usuario: {{ item.username }}"
-          - "Namespace: {{ item.namespace }}"
-          - "Secret: {{ item. secret_name }}"
-          - "Expira em: {{ item.ExpireDate }}"
-          - "Dias restantes: {{ item.DaysLeft }}"
+          - "Usuario: {{ item.output[0].username }}"
+          - "Namespace: {{ item.item.namespace }}"
+          - "Secret: {{ item.item.secret_name }}"
+          - "Expira em: {{ item.output[0].ExpireDate }}"
+          - "Dias restantes: {{ item.output[0].DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
+      when:
+        - (item.output[0]).DaysLeft | int > 0
+        - (item.output[0]).DaysLeft | int <= 5
    
     - name: Inicializar lista
       set_fact:
