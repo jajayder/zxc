@@ -38,14 +38,13 @@
         - "'username' in item.data"
         - "'password' in item.data"
         - (item.data.username | b64decode) is match(applications_prefix)
-      register: lista
       no_log: true
 
     - name: Compartilhar lista
       set_fact:
         application_accounts: "{{ application_accounts }}"
       delegate_facts: true
-      delegate_to: scl.corp
+#      delegate_to: scl.corp
 
 - name: Processar contas no AD
   hosts: all
@@ -84,7 +83,7 @@
  #           ExpireDate = $ExpireDate
  #           DaysLeft = $DaysLeft
  #         } | ConvertTo-Json
-      loop: "{{ lista.results }}"
+      loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
     - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
