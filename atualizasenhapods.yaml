@@ -46,13 +46,13 @@
       delegate_facts: true
       delegate_to: 10.83.103.61
 
-- name: Processar contas no AD
-  hosts: 10.83.103.61
+- name: Processar contas
+  hosts: windows
   gather_facts: false
   collections:
     - ansible.windows
     - microsoft.ad
-
+  
   tasks:
 
 #    - name: Inicializar relatório
@@ -63,12 +63,11 @@
       ansible.windows.win_powershell:
         script: |
           Import-Module ActiveDirectory
-          $User = Get-ADUser -Identity "{{ item.username }}" -Properties msDS-UserPasswordExpiryTimeComputed
-          $ExpireDate = :FromFileTime($User.'msDS-UserPasswordExpiryTimeComputed')
-          $DaysLeft = :Floor(($ExpireDate - (Get-Date)).TotalDays)
+          $dataUser = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
+          $DaysLeft = :Floor(($dataUser - (Get-Date)).TotalDays)
           @{
-            Username = $UserName
-            ExpireDate = $ExpireDate
+            Username = "{{ item.username }}"
+            ExpireDate = $dataUser
             DaysLeft = $DaysLeft
           } | ConvertTo-Json
       loop: "{{ application_accounts }}"
