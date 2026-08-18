@@ -62,6 +62,7 @@
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
+          [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
           $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
           $DaysLeft = [Math]::Floor(($Expiradata - (Get-Date)).TotalDays)
