@@ -61,34 +61,39 @@
         rotated_accounts: []
 
     - name: Consultar usuários
-      ansible.windows.win_powershell:
-        script: |
+      microsoft.ad.object_info:
+        identity: "{{ item.username }}"
+        properties:
+          - mdDS-UserPasswordExpiryTimeComputed
+      
+#      ansible.windows.win_powershell:
+#        script: |
 
-          Import-Module ActiveDirectory
+#          Import-Module ActiveDirectory
 
-          $UserName = "{{ item.username }}"
+#          $UserName = "{{ item.username }}"
 
-          $User = Get-ADUser `
-            -Identity $UserName `
-            -Properties PasswordLastSet
+#          $User = Get-ADUser `
+#            -Identity $UserName `
+#            -Properties PasswordLastSet
 
-          $Policy = Get-ADUserResultantPasswordPolicy $User
+#          $Policy = Get-ADUserResultantPasswordPolicy $User
 
-          $ExpireDate =
-            $User.PasswordLastSet.AddDays(
-              $Policy.MaxPasswordAge.TotalDays
-            )
+#          $ExpireDate =
+#            $User.PasswordLastSet.AddDays(
+#              $Policy.MaxPasswordAge.TotalDays
+#            )
 
-          $DaysLeft =
-            :Floor(
-              ($ExpireDate - (Get-Date)).TotalDays
-            )
+#          $DaysLeft =
+#            :Floor(
+#              ($ExpireDate - (Get-Date)).TotalDays
+#            )
 
-          @{
-            Username = $UserName
-            ExpireDate = $ExpireDate
-            DaysLeft = $DaysLeft
-          } | ConvertTo-Json
+#          @{
+#            Username = $UserName
+#            ExpireDate = $ExpireDate
+#            DaysLeft = $DaysLeft
+#          } | ConvertTo-Json
 
       loop: "{{ hostvars['scl.corp'].application_accounts }}"
       register: dataexpirasenha_ad
