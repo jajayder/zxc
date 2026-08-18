@@ -73,8 +73,8 @@
           } | ConvertTo-Json
       become_method: runas
       vars:
-        ansible_user: "{{ ansible_user }}"
-        ansible_password: "{{ ansible_password }}"
+        remote_user: "{{ ansible_user }}"
+        remote_password: "{{ ansible_password }}"
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
