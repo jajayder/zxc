@@ -63,8 +63,8 @@
       ansible.windows.win_powershell:
         script: |
           $usuario: "{{ ansible_user }}"
-          $senha: "{{ ansible_password }}"
-          $cred: New-Object System.Management.Automation.PSCredential($usuario, $senha)
+          $secpasswd: "{{ ansible_password }}" | ConvertTo-SecureString
+          $cred: New-Object System.Management.Automation.PSCredential($usuario, $secpasswd)
           [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
           $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Credential $cred -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
