@@ -71,7 +71,7 @@
             ExpireDate = $ExpireDate
             DaysLeft = $DaysLeft
           } | ConvertTo-Json
-      loop: "{{ hostvars[inventory_hostname].application_accounts }}"
+      loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
     - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
