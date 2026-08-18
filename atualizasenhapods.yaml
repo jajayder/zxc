@@ -62,12 +62,9 @@
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-          #$usuario: "{{ ansible_user }}"
-          #$secpasswd: "{{ ansible_password }}" | ConvertTo-SecureString
-          #$cred: New-Object System.Management.Automation.PSCredential($usuario, $secpasswd)
           [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
-          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Credential "{{ ansible_user }}","{{ ansible_password }}" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
+          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
           $DaysLeft = [Math]::Floor(($Expiradata - (Get-Date)).TotalDays)
           @{
             Username = "{{ item.username }}"
