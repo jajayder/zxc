@@ -63,7 +63,7 @@
       ansible.windows.win_powershell:
         script: |
           Import-Module ActiveDirectory
-          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "MGINFRADCSP3.SCL.CORP" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
+          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
           $DaysLeft = [Math]::Floor(($Expiradata - (Get-Date)).TotalDays)
           @{
             Username = "{{ item.username }}"
