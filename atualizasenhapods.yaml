@@ -61,40 +61,55 @@
         rotated_accounts: []
 
     - name: Consultar usuários
-      microsoft.ad.object_info:
-        identity: "{{ item.username }}"
-        properties:
-          - mdDS-UserPasswordExpiryTimeComputed
-      
-#      ansible.windows.win_powershell:
-#        script: |
+      ansible.windows.win_powershell:
+        script: |
+          $UserName = "{{ item.username }}"
+          $Password = ConvertTo-SecureString "{{ item.password }}" -AsPlainText -Force
 
-#          Import-Module ActiveDirectory
-
-#          $UserName = "{{ item.username }}"
-
-#          $User = Get-ADUser `
-#            -Identity $UserName `
-#            -Properties PasswordLastSet
-
-#          $Policy = Get-ADUserResultantPasswordPolicy $User
-
-#          $ExpireDate =
-#            $User.PasswordLastSet.AddDays(
-#              $Policy.MaxPasswordAge.TotalDays
-#            )
-
-#          $DaysLeft =
-#            :Floor(
-#              ($ExpireDate - (Get-Date)).TotalDays
-#            )
-
-#          @{
-#            Username = $UserName
-#            ExpireDate = $ExpireDate
-#            DaysLeft = $DaysLeft
-#          } | ConvertTo-Json
-
+          $Credential = New-Object PSCredential(
+            $UserName,
+            $Password
+          )
+          try {
+            $User = GetUser -Server "scl.corp -Credential $Credential -Identity $UserName -Properties msDS-UserPasswordExpiryTimeComputed
+            $ExpireDate = :FromFileTime(
+              $User.'msDS-UserPasswordExpiryTimeComputed'
+            )
+            $DaysLeft = :FormFileTime(
+              ($ExpireDate - (Get-Date)).TotalDays
+            )
+            @{
+              Username = $UserName
+              ExpireDate = $ExpireDate
+              DaysLeft = $DaysLeft
+            } | ConvertTo-Json
+          }
+          catch {
+            @{
+              Username = $UserName
+              Status = "AUTH_FAILED"
+            } | ConvertTo-Json
+          }
+            
+ #         Import-Module ActiveDirectory
+ #         $UserName = "{{ item.username }}"
+ #         $User = Get-ADUser `
+ #           -Identity $UserName `
+ #           -Properties PasswordLastSet
+ #         $Policy = Get-ADUserResultantPasswordPolicy $User
+ #         $ExpireDate =
+ #           $User.PasswordLastSet.AddDays(
+ #             $Policy.MaxPasswordAge.TotalDays
+ #           )
+ #         $DaysLeft =
+ #           :Floor(
+ #             ($ExpireDate - (Get-Date)).TotalDays
+ #           )
+ #         @{
+ #           Username = $UserName
+ #           ExpireDate = $ExpireDate
+ #           DaysLeft = $DaysLeft
+ #         } | ConvertTo-Json
       loop: "{{ hostvars['scl.corp'].application_accounts }}"
       register: dataexpirasenha_ad
    
