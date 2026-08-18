@@ -81,7 +81,7 @@
           - "Secret: {{ item. secret_name }}"
           - "Expira em: {{ item.ExpireDate }}"
           - "Dias restantes: {{ item.DaysLeft }}"
-      loop: "{{ dataexpirasenha_ad }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
    
     - name: Inicializar lista
       set_fact:
