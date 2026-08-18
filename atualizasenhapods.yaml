@@ -1,6 +1,6 @@
 - name: Buscar contas em Secrets
   hosts: localhost
-  gather_facts: false
+  gather_facts: true
 
   vars:
     applications_prefix: "^aplic-"
@@ -40,10 +40,14 @@
         - (item.data.username | b64decode) is match(applications_prefix)
       no_log: true
 
-    - name: Compartilhar lista
-      set_fact:
-        application_accounts: "{{ application_accounts }}"
-      delegate_facts: true
+     - name: Usuarios encontrados
+       debug:
+         var: application_accounts
+         
+#    - name: Compartilhar lista
+#      set_fact:
+#        application_accounts: "{{ application_accounts }}"
+#      delegate_facts: true
 #      delegate_to: scl.corp
 
 - name: Processar contas no AD
@@ -55,34 +59,22 @@
 
   tasks:
 
-    - name: Inicializar relatório
-      set_fact:
-        rotated_accounts: []
+#    - name: Inicializar relatório
+#      set_fact:
+#        rotated_accounts: []
 
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-          [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
-            
- #         Import-Module ActiveDirectory
- #         $UserName = "{{ item.username }}"
- #         $User = Get-ADUser `
- #           -Identity $UserName `
- #           -Properties PasswordLastSet
- #         $Policy = Get-ADUserResultantPasswordPolicy $User
- #         $ExpireDate =
- #           $User.PasswordLastSet.AddDays(
- #             $Policy.MaxPasswordAge.TotalDays
- #           )
- #         $DaysLeft =
- #           :Floor(
- #             ($ExpireDate - (Get-Date)).TotalDays
- #           )
- #         @{
- #           Username = $UserName
- #           ExpireDate = $ExpireDate
- #           DaysLeft = $DaysLeft
- #         } | ConvertTo-Json
+          Import-Module ActiveDirectory
+          $User = Get-ADUser -Identity "{{ item.username }}" -Properties msDS-UserPasswordExpiryTimeComputed
+          $ExpireDate = :FromFileTime($User.'msDS-UserPasswordExpiryTimeComputed')
+          $DaysLeft = :Floor(($ExpireDate - (Get-Date)).TotalDays)
+          @{
+            Username = $UserName
+            ExpireDate = $ExpireDate
+            DaysLeft = $DaysLeft
+          } | ConvertTo-Json
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
@@ -93,7 +85,7 @@
           - "Namespace: {{ item.namespace }}"
           - "Secret: {{ item. secret_name }}"
           - "Expira em: {{ item.expiration_date }}"
-#          - "Dias restantes: {{ item.days_left }}"
+          - "Dias restantes: {{ item.days_left }}"
       loop: "{{ dataexpirasenha_ad }}"
    
     - name: Inicializar lista
