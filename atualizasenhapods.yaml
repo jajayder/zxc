@@ -44,7 +44,8 @@
       set_fact:
         application_accounts: "{{ application_accounts }}"
       delegate_facts: true
-      delegate_to: windows
+      delegate_to: MGINFRADCSP3
+      
 - name: Processar contas
   hosts: windows
   gather_facts: false
