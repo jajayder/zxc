@@ -44,8 +44,7 @@
       set_fact:
         application_accounts: "{{ application_accounts }}"
       delegate_facts: true
-      delegate_to: 10.83.103.61
-
+      delegate_to: windows
 - name: Processar contas
   hosts: windows
   gather_facts: false
