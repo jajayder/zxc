@@ -48,7 +48,7 @@
       delegate_to: scl.corp
 
 - name: Processar contas no AD
-  hosts: scl.corp
+  hosts: all
   gather_facts: false
   collections:
     - ansible.windows
