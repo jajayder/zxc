@@ -47,7 +47,7 @@
       delegate_to: 10.83.103.61
 
 - name: Processar contas no AD
-  hosts: localhost
+  hosts: 10.83.103.61
   gather_facts: false
   collections:
     - ansible.windows
@@ -62,7 +62,7 @@
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-#          Import-Module ActiveDirectory
+          Import-Module ActiveDirectory
           $User = Get-ADUser -Identity "{{ item.username }}" -Properties msDS-UserPasswordExpiryTimeComputed
           $ExpireDate = :FromFileTime($User.'msDS-UserPasswordExpiryTimeComputed')
           $DaysLeft = :Floor(($ExpireDate - (Get-Date)).TotalDays)
