@@ -96,7 +96,7 @@
           - "Dias restantes: {{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
       vars:
-        ps_data: "{{ item.output[0] | from_json }}
+        ps_data: "{{ item.output[0] | from_json }}"
 #      when:
 #        - (item.output[0]).DaysLeft | int > 0
 #        - (item.output[0]).DaysLeft | int <= 5
