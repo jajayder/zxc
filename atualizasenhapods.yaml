@@ -72,7 +72,7 @@
             $expireDateFormatado = "N/A"
           } else {
             $expiradata = [datetime]::FromFileTime($senhaexpira."msDS-UserPasswordExpiryTimeComputed")
-            $diasrestantes = [Math]::Floor(($expiradata - (Get-Date)).TotalDays)
+            [int]$diasrestantes = [Math]::Floor(($expiradata - (Get-Date)).TotalDays)
             $expireDateFormatado = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
           }
           @{
