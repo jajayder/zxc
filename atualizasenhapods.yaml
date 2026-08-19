@@ -117,10 +117,14 @@
     
     - name: Adiciona ao relatório
       set_fact:
+        relatorio: []
+        
+    - name: Adiciona ao relatório
+      set_fact:
         relatorio: "{{ relatorio + [ {
           'username': item.item.username,
           'namespace': item.item.namespace,
-          'secret': item.item.secret,
+          'secret': item.item.secret_name,
           'exprira_em': ps_data.ExpireDate,
           'days_left': ps_data.DaysLeft
         } ] }}"  
