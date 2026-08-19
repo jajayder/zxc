@@ -60,7 +60,7 @@
 #        rotated_accounts: []
 
     - name: Consultar usuários
-      ansible.windows.win_shell:
+      ansible.windows.win_powershell:
         script: |
           Enable-WSManCredSSP -Role Server -Force
           Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
@@ -87,14 +87,16 @@
       register: dataexpirasenha_ad
 
     - name: Usuarios com senha expiradas ou para expirar
-      debug:
+      ansible.builtin.debug:
         msg:
-          - "Usuario: {{ (item.stdout | from_json).username }}"
+          - "Usuario: {{ ps_data.Username }}"
           - "Namespace: {{ item.item.namespace }}"
           - "Secret: {{ item.item.secret_name }}"
-          - "Expira em: {{ (item.stdout | from_json).ExpireDate }}"
-          - "Dias restantes: {{ (item.stdout | from_json).DaysLeft }}"
+          - "Expira em: {{ ps_data.ExpireDate }}"
+          - "Dias restantes: {{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}
 #      when:
 #        - (item.output[0]).DaysLeft | int > 0
 #        - (item.output[0]).DaysLeft | int <= 5
