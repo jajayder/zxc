@@ -86,11 +86,6 @@
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
-#    - name: resultado bruto
-#      debug:
-#        var: item
-#      loop: "{{ dataexpirasenha_ad.results }}"
-
     - name: Usuarios com senha expiradas ou para expirar
       ansible.builtin.debug:
         msg:
@@ -105,9 +100,22 @@
       loop_control:
         label: "{{ item.item.username }}"
 
-#      when:
-#        - (item.output[0]).DaysLeft | int > 0
-#        - (item.output[0]).DaysLeft | int <= 5
+    - name: Usuarios com senha expiradas ou para expirar <= 5 dias
+      ansible.builtin.debug:
+        msg:
+          - "Usuario: {{ item.item.username }}"
+          - "Namespace: {{ item.item.namespace }}"
+          - "Secret: {{ item.item.secret_name }}"
+          - "Expira em: {{ ps_data.ExpireDate }}"
+          - "Dias restantes: {{ ps_data.DaysLeft }}"
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
+      loop_control:
+        label: "{{ item.item.username }}"
+      when:
+        - (item.output[0]).DaysLeft | int > 0
+        - (item.output[0]).DaysLeft | int <= 5
    
     - name: Inicializar lista
       set_fact:
