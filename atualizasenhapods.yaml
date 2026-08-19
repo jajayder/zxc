@@ -64,17 +64,20 @@
         script: |
           Enable-WSManCredSSP -Role Server -Force
           Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
-#          [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
+
           $senhaexpira = Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties PasswordNeverExpires, "msDS-UserPasswordExpiryTimeComputed"
-          if ($senhaexpira.PasswordNeverExpires -eq $true) {
+          if ($senhaexpira.PasswordNeverExpires) {
             $diasrestantes = "senha nunca expira"
+            $expireDateFormatado = "N/A"
           } else {
             $expiradata = [datetime]::FromFileTime($senhaexpira."msDS-UserPasswordExpiryTimeComputed")
             $diasrestantes = [Math]::Floor(($expiradata - (Get-Date)).TotalDays)
-          }@{
+            $expireDateFormatado = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
+          }
+          @{
             Username = "{{ item.username }}"
-            ExpireDate = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
+            ExpireDate = $expireDateFormatado
             DaysLeft = $diasrestantes
           } | ConvertTo-Json
       vars:
