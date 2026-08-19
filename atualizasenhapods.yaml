@@ -62,8 +62,8 @@
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-#          Enable-WSManCredSSP -Role Server -Force
-#          Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
+          Enable-WSManCredSSP -Role Server -Force
+          Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
 #          [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
           $senhaexpira = Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties PasswordNeverExpires, "msDS-UserPasswordExpiryTimeComputed"
