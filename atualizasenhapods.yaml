@@ -86,10 +86,10 @@
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
-    - name: resultado bruto
-      debug:
-        var: item
-      loop: "{{ dataexpirasenha_ad.results }}"
+#    - name: resultado bruto
+#      debug:
+#        var: item
+#      loop: "{{ dataexpirasenha_ad.results }}"
 
     - name: Usuarios com senha expiradas ou para expirar
       ansible.builtin.debug:
@@ -101,7 +101,7 @@
           - "Dias restantes: {{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
       vars:
-        ps_data: "{{ item.output[0] | from_json }}"
+        ps_data: "{{ item.output | from_json }}"
 #      when:
 #        - (item.output[0]).DaysLeft | int > 0
 #        - (item.output[0]).DaysLeft | int <= 5
