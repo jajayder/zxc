@@ -89,11 +89,11 @@
     - name: Usuarios com senha expiradas ou para expirar
       debug:
         msg:
-          - "Usuario: {{ item.output[0].username }}"
+          - "Usuario: {{ (item.stdout | from_json).username }}"
           - "Namespace: {{ item.item.namespace }}"
           - "Secret: {{ item.item.secret_name }}"
-          - "Expira em: {{ item.output[0].ExpireDate }}"
-          - "Dias restantes: {{ item.output[0].DaysLeft }}"
+          - "Expira em: {{ (item.stdout | from_json).ExpireDate }}"
+          - "Dias restantes: {{ (item.stdout | from_json).DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
 #      when:
 #        - (item.output[0]).DaysLeft | int > 0
