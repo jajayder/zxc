@@ -72,7 +72,7 @@
           } else {
             $expiradata = [datetime]::FromFileTime($senhaexpira."msDS-UserPasswordExpiryTimeComputed")
             $diasrestantes = [Math]::Floor(($expiradata - (Get-Date)).TotalDays)
-          @{
+          }@{
             Username = "{{ item.username }}"
             ExpireDate = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
             DaysLeft = $diasrestantes
@@ -83,7 +83,7 @@
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
-    - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
+    - name: Usuarios com senha expiradas ou para expirar
       debug:
         msg:
           - "Usuario: {{ item.output[0].username }}"
@@ -92,9 +92,9 @@
           - "Expira em: {{ item.output[0].ExpireDate }}"
           - "Dias restantes: {{ item.output[0].DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
-      when:
-        - (item.output[0]).DaysLeft | int > 0
-        - (item.output[0]).DaysLeft | int <= 5
+#      when:
+#        - (item.output[0]).DaysLeft | int > 0
+#        - (item.output[0]).DaysLeft | int <= 5
    
     - name: Inicializar lista
       set_fact:
