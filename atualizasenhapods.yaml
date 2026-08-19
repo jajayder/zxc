@@ -89,7 +89,7 @@
     - name: Usuarios com senha expiradas ou para expirar
       ansible.builtin.debug:
         msg:
-          - "Usuario: {{ ps_data.Username }}"
+          - "Usuario: {{ item.item.username }}"
           - "Namespace: {{ item.item.namespace }}"
           - "Secret: {{ item.item.secret_name }}"
           - "Expira em: {{ ps_data.ExpireDate }}"
