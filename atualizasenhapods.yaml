@@ -158,21 +158,21 @@
       </body>
       </html>
       
-- name: Email Senhas Pods
-  hosts: all
-  collections:
-    - community.general
-  tasks:          
-    - name: Send e-mail
-      community.general.notification.mail:
-        host: mail.energisa.com.br 
-        port: 25
-        subtype: html
-        from: awx@energisa.com.br 
-        to:
-          - jayder.carneiro@energisaterceiros.com.br
-        subject: Aplic-users com senha a vencer <=5 dias - {{ now(fmt='%d/%m/%Y') }} 
-        body: "{{ html_userpods }}"
+#- name: Email Senhas Pods
+#  hosts: all
+#  collections:
+#    - community.general
+#  tasks:          
+#    - name: Send e-mail
+#      community.general.notification.mail:
+#        host: mail.energisa.com.br 
+#        port: 25
+#        subtype: html
+#        from: awx@energisa.com.br 
+#        to:
+#          - jayder.carneiro@energisaterceiros.com.br
+#        subject: Aplic-users com senha a vencer <=5 dias - {{ now(fmt='%d/%m/%Y') }} 
+#        body: "{{ html_userpods }}"
  
         
    
