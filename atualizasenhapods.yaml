@@ -40,7 +40,7 @@
         - "'username' in item.data"
         - "'password' in item.data"
         - (item.data.username | b64decode) is match(applications_prefix)
-#      no_log: true
+      no_log: true
 
     - name: Compartilhar lista
       set_fact:
