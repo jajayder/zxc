@@ -93,13 +93,17 @@
 
     - name: Usuarios com senha expiradas ou para expirar
       set_fact:
-        usuarios_expiracao: "{{ usuarios_expiracao | default([]) + [ {
-          'Usuario': ps_data.username,
-          'Namespace': item.item.namespace,
-          'Secret': item.item.secret_name,
-          'Expira em': ps_data.ExpireDate,
-          'Dias restantes':ps_data.DaysLeft
-        } ] }}"
+        usuarios_expiracao: >-
+        {{
+          usuarios_expiracao | default([]) +
+          [{
+            'Usuario': ps_data.Username,
+            'Namespace': item.item.namespace,
+            'Secret': item.item.secret_name,
+            'Expira em': ps_data.ExpireDate,
+            'Dias restantes': ps_data.DaysLeft
+          }]
+        }}
       vars:
         ps_data: "{{ item.output[0] | from_json }}"
       loop: "{{ dataexpirasenha_ad.results }}"
