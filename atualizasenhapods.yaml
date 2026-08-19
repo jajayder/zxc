@@ -114,8 +114,8 @@
       loop_control:
         label: "{{ item.item.username }}"
       when:
-        - (item.output[0]).DaysLeft | int > 0
-        - (item.output[0]).DaysLeft | int <= 5
+        - item.DaysLeft != 'senha nunca expira'
+        - (item.DaysLeft | int) <= 5
    
     - name: Inicializar lista
       set_fact:
