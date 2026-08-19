@@ -16,14 +16,8 @@
     
     - name: Inicializar lista
       set_fact:
-        application_accounts: >-
-          {{
-            all_secrets.resources
-            |selecttr('type','defined')
-            |selecttr('type','equalto','Opaque')
-            |list
-          }}
-
+        application_accounts: []
+        
     - name: Extrair username e password
       set_fact:
         application_accounts: >-
@@ -40,6 +34,8 @@
           }}
       loop: "{{ secret_data.resources }}"
       when:
+        - item.type is defined
+        - item.type == 'Opaque'
         - item.data is defined
         - "'username' in item.data"
         - "'password' in item.data"
