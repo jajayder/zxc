@@ -92,16 +92,18 @@
 #      loop: "{{ dataexpirasenha_ad.results }}"
 
     - name: Usuarios com senha expiradas ou para expirar
-      ansible.builtin.debug:
-        msg:
-          - "Usuario: {{ item.item.username }}"
-          - "Namespace: {{ item.item.namespace }}"
-          - "Secret: {{ item.item.secret_name }}"
-          - "Expira em: {{ ps_data.ExpireDate }}"
-          - "Dias restantes: {{ ps_data.DaysLeft }}"
-      loop: "{{ dataexpirasenha_ad.results }}"
+      set_fact:
+        usuarios_expiracao: "{{ usuarios_expiracao | default([]) + [ {
+          'Usuario': ps_data.username,
+          'Namespace': item.item.namespace,
+          'Secret': item.item.secret_name,
+          'Expira em': ps_data.ExpireDate,
+          'Dias restantes':ps_data.DaysLeft
+        } ] }}"
       vars:
         ps_data: "{{ item.output[0] | from_json }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
+
 #      when:
 #        - (item.output[0]).DaysLeft | int > 0
 #        - (item.output[0]).DaysLeft | int <= 5
