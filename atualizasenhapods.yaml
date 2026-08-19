@@ -117,59 +117,58 @@
         - (item.output[0] | from_json).DaysLeft != 'senha nunca expira'
         - ((item.output[0] | from_json).DaysLeft | int) <= 5
    
-    - name: Inicializar lista
-      set_fact:
-        accounts_to_rotate: []
+#    - name: Inicializar lista
+#      set_fact:
+#        accounts_to_rotate: []
 
-    - name: Filtrar expiração <= 5 dias
-      set_fact:
-        accounts_to_rotate: >-
-          {{
-            accounts_to_rotate +
-            [
-              item.item |
-              combine(
-                {
-                  'days_left':
-                  (item.output[0].DaysLeft|int),
+#    - name: Filtrar expiração <= 5 dias
+#      set_fact:
+#        accounts_to_rotate: >-
+#          {{
+#            accounts_to_rotate +
+#            [
+#              item.item |
+#              combine(
+#                {
+#                  'days_left':
+#                  (item.output[0].DaysLeft|int),
+#                  'expiration':
+#                  item.output[0].ExpireDate
+#                }
+#              )
+#            ]
+#          }}
+#      loop: "{{ dataexpirasenha_ad.results }}"
+#      when:
+#        - item.output[0].DaysLeft | int <= 5
 
-                  'expiration':
-                  item.output[0].ExpireDate
-                }
-              )
-            ]
-          }}
-      loop: "{{ dataexpirasenha_ad.results }}"
-      when:
-        - item.output[0].DaysLeft | int <= 5
+#    - name: Filtrar expiração <= 5 dias
+#      set_fact:
+#        accounts_to_rotate: >-
+#          {{
+#            accounts_to_rotate + [
+#              {
+#                'username': item.item.username,
+#                'namespace': item.item.namespace,
+#                'secret_name': item.item.secret_name,
+#                'expiration_date': item.output[0].ExpireDate,
+#                'days_left': item.output[0].DaysLeft | int
+#              }
+#            ]
+#          }}
+#      loop: "{{ dataexpirasenha_ad.results }}"
+#      when:
+#        - item.output[0].DaysLeft | int <= 5
 
-    - name: Filtrar expiração <= 5 dias
-      set_fact:
-        accounts_to_rotate: >-
-          {{
-            accounts_to_rotate + [
-              {
-                'username': item.item.username,
-                'namespace': item.item.namespace,
-                'secret_name': item.item.secret_name,
-                'expiration_date': item.output[0].ExpireDate,
-                'days_left': item.output[0].DaysLeft | int
-              }
-            ]
-          }}
-      loop: "{{ dataexpirasenha_ad.results }}"
-      when:
-        - item.output[0].DaysLeft | int <= 5
-
-    - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
-      debug:
-        msg:
-          - "Usuario: {{ item.username }}"
-          - "Namespace: {{ item.namespace }}"
-          - "Secret: {{ item. secret_name }}"
-          - "Expira em: {{ item.expiration_date }}"
-          - "Dias restantes: {{ item.days_left }}"
-      loop: "{{ accounts_to_rotate }}"
+#    - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
+#      debug:
+#        msg:
+#          - "Usuario: {{ item.username }}"
+#          - "Namespace: {{ item.namespace }}"
+#          - "Secret: {{ item. secret_name }}"
+#          - "Expira em: {{ item.expiration_date }}"
+#          - "Dias restantes: {{ item.days_left }}"
+#      loop: "{{ accounts_to_rotate }}"
     
 #     - name: Gerar senha
 #       set_fact:
