@@ -62,8 +62,8 @@
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-          Enable-WSManCredSSP -Role Server -Force
-          Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
+          $null = Enable-WSManCredSSP -Role Server -Force
+          $null = Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
           Import-Module ActiveDirectory
 
           $senhaexpira = Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties PasswordNeverExpires, "msDS-UserPasswordExpiryTimeComputed"
@@ -101,7 +101,7 @@
           - "Dias restantes: {{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
       vars:
-        ps_data: "{{ item.output[0] }}"
+        ps_data: "{{ item.output[0] | from_json }}"
 #      when:
 #        - (item.output[0]).DaysLeft | int > 0
 #        - (item.output[0]).DaysLeft | int <= 5
