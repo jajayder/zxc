@@ -86,6 +86,11 @@
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
+    - name: resultado bruto
+      debug:
+        var: item
+      loop: "{{ dataexpirasenha_ad.results }}"
+
     - name: Usuarios com senha expiradas ou para expirar
       ansible.builtin.debug:
         msg:
