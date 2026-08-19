@@ -62,16 +62,20 @@
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-          Enable-WSManCredSSP -Role Server -Force
-          Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
-          [system.security.Principal.WindowsIdentity]::GetCurrent().Name
+#          Enable-WSManCredSSP -Role Server -Force
+#          Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
+#          [system.security.Principal.WindowsIdentity]::GetCurrent().Name
           Import-Module ActiveDirectory
-          $Expiradata = [datetime]::FromFileTime((Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties "msDS-UserPasswordExpiryTimeComputed")."msDS-UserPasswordExpiryTimeComputed")
-          $DaysLeft = [Math]::Floor(($Expiradata - (Get-Date)).TotalDays)
+          $senhaexpira = Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties PasswordNeverExpires, "msDS-UserPasswordExpiryTimeComputed"
+          if ($senhaexpira.PasswordNeverExpires -eq $true) {
+            $diasrestantes = "senha nunca expira"
+          } else {
+            $expiradata = [datetime]::FromFileTime($senhaexpira."msDS-UserPasswordExpiryTimeComputed")
+            $diasrestantes = [Math]::Floor(($expiradata - (Get-Date)).TotalDays)
           @{
             Username = "{{ item.username }}"
-            ExpireDate = $Expiradata.ToString("dd-MM-yyyy HH:mm:ss")
-            DaysLeft = $DaysLeft
+            ExpireDate = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
+            DaysLeft = $diasrestantes
           } | ConvertTo-Json
       vars:
         remote_user: "{{ ansible_user }}"
