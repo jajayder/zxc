@@ -60,7 +60,7 @@
 #        rotated_accounts: []
 
     - name: Consultar usuários
-      ansible.windows.win_powershell:
+      ansible.windows.win_shell:
         script: |
           Enable-WSManCredSSP -Role Server -Force
           Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
