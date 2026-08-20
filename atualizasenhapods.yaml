@@ -1,6 +1,9 @@
 - name: Buscar contas em Secrets
   hosts: localhost
   gather_facts: true
+  collections:
+    - ansible.windows
+    - microsoft.ad
 
   vars:
     applications_prefix: "^aplic-"
@@ -74,14 +77,14 @@
       loop_control:
         label: "{{ item }}"
       
-- name: Processar contas
-  hosts: windows
-  gather_facts: false
-  collections:
-    - ansible.windows
-    - microsoft.ad
+#- name: Processar contas
+#  hosts: windows
+#  gather_facts: false
+#  collections:
+#    - ansible.windows
+#    - microsoft.ad
   
-  tasks:
+#  tasks:
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
