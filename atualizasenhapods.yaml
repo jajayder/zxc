@@ -101,10 +101,10 @@
             | selectattr('username', 'equalto', item)
             | list
           }}
-          resultado: 
-            username: "{{ item }}"
-            password: "{{ contas_usuario[0].password }}"
-            references: "{{ contas_usuarios }}"
+        resultado: 
+          username: "{{ item }}"
+          password: "{{ contas_usuario[0].password }}"
+          references: "{{ contas_usuarios }}"
       loop: "{{ usuarios_unicos }}"  
 
     - name: secrets por usuario
