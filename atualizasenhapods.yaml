@@ -104,7 +104,7 @@
         resultado: 
           username: "{{ item }}"
           password: "{{ contas_usuario[0].password }}"
-          references: "{{ contas_usuarios }}"
+          references: "{{ contas_usuario }}"
       loop: "{{ usuarios_unicos }}"  
 
     - name: secrets por usuario
