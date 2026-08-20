@@ -179,8 +179,10 @@
         from: awx@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
-        subject: Aplic-users com senha a vencer <=5 dias - {{ now(fmt='%d/%m/%Y') }} 
-        body: "{{ html_userpods }}" "{{ ansible_user }}"
+        subject: Aplic-users OCPD1 com senha a vencer <=5 dias - {{ now(fmt='%d/%m/%Y') }} 
+        body: |
+          "{{ html_userpods }}"
+          "{{ ansible_user }}"
    
 #    - name: Inicializar lista
 #      set_fact:
