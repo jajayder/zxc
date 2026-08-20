@@ -95,7 +95,7 @@
       set_fact:
         usuarios_agrupados: "{{ usuarios_agrupados + [ novo_usuario ] }}"
       vars:
-        novo_usuarios:
+        novo_usuario:
           username: "{{ item }}"
           password: >-
             {{
