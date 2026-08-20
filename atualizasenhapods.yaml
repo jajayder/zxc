@@ -183,6 +183,8 @@
         body: |
           "{{ html_userpods }}"
           "{{ ansible_user }}"
+      delegate_to: localhost
+      run_once: true
    
 #    - name: Inicializar lista
 #      set_fact:
