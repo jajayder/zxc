@@ -159,7 +159,7 @@
               <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
               <td style="border:1px solid #000;text-align:center;">{{ item.secret }}</td>
               <td style="border:1px solid #000;text-align:center;">{{ item.expira_em }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.daysleft }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.days_left }}</td>
             </tr>
             {% endfor %}
           </table>
@@ -180,7 +180,7 @@
         to:
           - jayder.carneiro@energisaterceiros.com.br
         subject: Aplic-users com senha a vencer <=5 dias - {{ now(fmt='%d/%m/%Y') }} 
-        body: "{{ html_userpods }}"
+        body: "{{ html_userpods }}" "{{ ansible_user }}"
    
 #    - name: Inicializar lista
 #      set_fact:
