@@ -172,7 +172,7 @@
     - community.general
   tasks:          
     - name: Send e-mail
-      community.general.notification.mail:
+      community.general.mail:
         host: mail.energisa.com.br 
         port: 25
         subtype: html
