@@ -105,7 +105,9 @@
           username: "{{ item }}"
           password: "{{ contas_usuario[0].password }}"
           references: "{{ contas_usuario }}"
-      loop: "{{ usuarios_unicos }}"  
+      loop: "{{ usuarios_unicos }}" 
+      loop_control:
+        label: "{{ item }}"
 
     - name: secrets por usuario
       debug:
