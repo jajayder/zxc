@@ -135,36 +135,36 @@
         - (item.output[0] | from_json).DaysLeft != 'senha nunca expira'
         - ((item.output[0] | from_json).DaysLeft | int) <= 5
 
-- name: Montar HTML
-  set_fact:
-    html_userpods: []
-    
-- name: Montar HTML
-  set_fact:
-    html_userpods: |
-      <html>
-      <body>
-      <h2> Olá! Usuarios com senha a vencer ( <= 5 dias ) - via automação </h2>
-      <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
-        <tr bgcolor="#D9EAD3">
-          <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
-          <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
-          <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
-          <th style="background:#8FAADC;border:1px solid #000;">Expira em</th>
-          <th style="background:#8FAADC;border:1px solid #000;">Dias Restantes</th>
-        </tr>
-        {% for item in relatorio %}
-        <tr>
-          <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
-          <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
-          <td style="border:1px solid #000;text-align:center;">{{ item.secret }}</td>
-          <td style="border:1px solid #000;text-align:center;">{{ item.expira_em }}</td>
-          <td style="border:1px solid #000;text-align:center;">{{ item.daysleft }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-      </body>
-      </html>
+    - name: Montar HTML
+      set_fact:
+        html_userpods: []
+        
+    - name: Montar HTML
+      set_fact:
+        html_userpods: |
+          <html>
+          <body>
+          <h2> Olá! Usuarios com senha a vencer ( <= 5 dias ) - via automação </h2>
+          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+            <tr bgcolor="#D9EAD3">
+              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Expira em</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Dias Restantes</th>
+            </tr>
+            {% for item in relatorio %}
+            <tr>
+              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.secret }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.expira_em }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.daysleft }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          </body>
+          </html>
       
 - name: Email Senhas Pods
   hosts: all
