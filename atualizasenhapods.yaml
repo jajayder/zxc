@@ -102,7 +102,6 @@
               (
                 application_accounts
                   | selectattr('username', 'equalto', item)
-                  | map(attribute='password')
                   | first
               ).password
             }}
@@ -110,7 +109,7 @@
             {{
               application_accounts
                 | selectattr('username', 'equalto', item)
-                | first
+                | list
             }}
       loop: "{{ usuarios_unicos }}"  
 
