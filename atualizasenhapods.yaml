@@ -91,30 +91,34 @@
       set_fact:
         usuarios_agrupados: []
 
-    - name: inicializar agrupamento
+    - name: agrupar por usuario
       set_fact:
-        usuarios_agrupados: >-
-          {{
-            usuarios_agrupados + [
-              {
-                'username': item,
-                'password':
-                  (
-                    application_accounts
-                    | selectattr('username', 'equalto', item)
-                    | first
-                  ).password,
-                'secret':
-                  (
-                    application_accounts
-                    | selectattr('username', 'equalto', item)
-                    | map('combine', {})
-                    | map('dict2times')
-                    | list
-                  )
-              }
-            ]
-          }}
+        usuarios_agrupados: "{{ usuarios_agrupados + [ novo_usuario ] }}"
+      vars:
+        novo_usuarios:
+          username: "{{ item }}"
+          password: >-
+            {{
+              application_accounts
+                | selectattr('username', 'equalto', item)
+                | map(attribute='password')
+                | first
+            }}
+          namespace: >-
+            {{
+              application_accounts
+                | selectattr('username', 'equalto', item)
+                | map(attribute='namespace')
+                | unique
+                | first
+            }}
+          secret: >-
+            {{
+              application_accounts
+                | selectattr('username', 'equalto', item)
+                | map(attribute='secret_name')
+                | first
+            }}
       loop: "{{ usuarios_unicos }}"  
 
     - name: Usuarios com senha expiradas ou para expirar <= 10 dias
