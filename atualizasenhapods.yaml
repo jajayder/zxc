@@ -4,6 +4,7 @@
   collections:
     - ansible.windows
     - microsoft.ad
+    - community.general
 
   vars:
     applications_prefix: "^aplic-"
@@ -189,6 +190,59 @@
             username: "{{ item.0.username | b64encode }}"
             password: "{{ item.0.new_password | b64encode }}"
       loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
+      register: secrets_updates
+
+    - name: montando relatorio:
+      set_fact:
+        relatorio_alteracoes: "{{ relatorio_alteracoes + [ {
+          'username': item.item.0.username,
+          'namespace': item.item.1.namespace,
+          'secret_name': item.item.1.secret_name
+        } ] }}"
+      loop: "{{ secrets_updates.results }}"
+      when: not item.failed
+
+    - name: Montar HTML
+      set_fact:
+        html_userpods: |
+          <html>
+          <body>
+          <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
+          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+            <tr bgcolor="#D9EAD3">
+              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
+            </tr>
+            {% for item in relatorio_alteracoes %}
+            <tr>
+              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
+          {{ relatorio_alteracoes | length }}
+          
+          </body>
+          </html>
+
+    - name: Enviando email do relatorio
+      community.general.mail:
+        host: mail.energisa.com.br 
+        port: 25
+        subtype: html
+        from: awx@energisa.com.br 
+        to:
+          - jayder.carneiro@energisaterceiros.com.br
+        subject: Relatorio de credenciais atualizadas OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
+        body: |
+          "{{ html_userpods }}"
+          "{{ ansible_user }}"
+      delegate_to: localhost
+      run_once: true
+      when: relatorio_alteracoes | length > 0
 
             
                   
