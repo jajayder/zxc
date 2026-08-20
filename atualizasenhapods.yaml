@@ -192,7 +192,11 @@
       loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
       register: secrets_updates
 
-    - name: montando relatorio:
+    - name: iniciando relatorio
+      set_fact:
+        relatorio_alteracoes: []
+        
+    - name: montando relatorio
       set_fact:
         relatorio_alteracoes: "{{ relatorio_alteracoes + [ {
           'username': item.item.0.username,
