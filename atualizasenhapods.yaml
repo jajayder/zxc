@@ -93,26 +93,20 @@
 
     - name: agrupar por usuario
       set_fact:
-        usuarios_agrupados: "{{ usuarios_agrupados + [ novo_usuario ] }}"
+        usuarios_agrupados: "{{ usuarios_agrupados + [ resultado ] }}"
       vars:
-        novo_usuario:
-          username: "{{ item }}"
-          password: >-
-            {{
-              (
-                application_accounts
-                  | selectattr('username', 'equalto', item)
-                  | first
-              ).password
-            }}
-          references: >-
-            {{
-              application_accounts
-                | selectattr('username', 'equalto', item)
-                | list
-            }}
+        contas_usuario: >-
+          {{
+            application_accounts
+            | selectattr('username', 'equalto', item)
+            | list
+          }}
+          resultado: 
+            username: "{{ item }}"
+            password: "{{ contas_usuario[0].password }}"
+            references: "{{ contas_usuarios }}"
       loop: "{{ usuarios_unicos }}"  
 
-    - name: Usuarios com senha expiradas ou para expirar <= 10 dias
+    - name: secrets por usuario
       debug:
         var: usuarios_agrupados
