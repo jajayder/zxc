@@ -83,208 +83,40 @@
       loop: "{{ application_accounts }}"
       register: dataexpirasenha_ad
 
-    - name: Usuarios com senha expiradas ou para expirar
-      ansible.builtin.debug:
-        msg:
-          - "Usuario: {{ item.item.username }}"
-          - "Namespace: {{ item.item.namespace }}"
-          - "Secret: {{ item.item.secret_name }}"
-          - "Expira em: {{ ps_data.ExpireDate }}"
-          - "Dias restantes: {{ ps_data.DaysLeft }}"
-      vars:
-        ps_data: "{{ item.output[0] | from_json }}"
-      loop: "{{ dataexpirasenha_ad.results }}"
-      loop_control:
-        label: "{{ item.item.username }}"
-      
-
-    - name: Usuarios com senha expiradas ou para expirar <= 5 dias
-      ansible.builtin.debug:
-        msg:
-          - "Usuario: {{ item.item.username }}"
-          - "Namespace: {{ item.item.namespace }}"
-          - "Secret: {{ item.item.secret_name }}"
-          - "Expira em: {{ ps_data.ExpireDate }}"
-          - "Dias restantes: {{ ps_data.DaysLeft }}"
-      vars:
-        ps_data: "{{ item.output[0] | from_json }}"
-      loop: "{{ dataexpirasenha_ad.results }}"
-      loop_control:
-        label: "{{ item.item.username }}"
-      when:
-        - (item.output[0] | from_json).DaysLeft != 'senha nunca expira'
-        - ((item.output[0] | from_json).DaysLeft | int) <= 5
-    
-    - name: Adiciona ao relatório
+    - name: Obter usuários únicos
       set_fact:
-        relatorio: []
-        
-    - name: Adiciona ao relatório
+        usuarios_unicos: "{{ application_accounts | map(attribute='username') | unique | list }}"
+
+    - name: inicializar agrupamento
       set_fact:
-        relatorio: "{{ relatorio + [ {
-          'username': item.item.username,
-          'namespace': item.item.namespace,
-          'secret': item.item.secret_name,
-          'expira_em': ps_data.ExpireDate,
-          'days_left': ps_data.DaysLeft
-        } ] }}"  
-      vars:
-        ps_data: "{{ item.output[0] | from_json }}"
-      loop: "{{ dataexpirasenha_ad.results }}"
-      when:
-        - (item.output[0] | from_json).DaysLeft != 'senha nunca expira'
-        - ((item.output[0] | from_json).DaysLeft | int) <= 5
+        usuarios_agrupados: []
 
-    - name: Montar HTML
+    - name: inicializar agrupamento
       set_fact:
-        html_userpods: []
-        
-    - name: Montar HTML
-      set_fact:
-        html_userpods: |
-          <html>
-          <body>
-          <h5> Olá! Usuários com senha <= 5 dias para expirar - via automação </h5>
-          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
-            <tr bgcolor="#D9EAD3">
-              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Expira em</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Dias Restantes</th>
-            </tr>
-            {% for item in relatorio %}
-            <tr>
-              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.secret }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.expira_em }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.days_left }}</td>
-            </tr>
-            {% endfor %}
-          </table>
-          </body>
-          </html>
-      
-- name: Email Senhas Pods
-  hosts: all
-  collections:
-    - community.general
-  tasks:          
-    - name: Send e-mail
-      community.general.mail:
-        host: mail.energisa.com.br 
-        port: 25
-        subtype: html
-        from: awx@energisa.com.br 
-        to:
-          - jayder.carneiro@energisaterceiros.com.br
-        subject: Expiração de credenciais - Aplic-users OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
-        body: |
-          "{{ html_userpods }}"
-          "{{ ansible_user }}"
-      delegate_to: localhost
-      run_once: true
-   
-#    - name: Inicializar lista
-#      set_fact:
-#        accounts_to_rotate: []
+        usuarios_agrupados: >-
+          {{
+            usuarios_agrupados + [
+              {
+                'username': item,
+                'password':
+                  (
+                    application_accounts
+                    | selectattr('username', 'equalto', item)
+                    | first
+                  ).password,
+                'secret':
+                  (
+                    application_accounts
+                    | selectattr('username', 'equalto', item)
+                    | map('combine', {})
+                    | map('dict2times')
+                    | list
+                  )
+              }
+            ]
+          }}
+      loop: "{{ usuarios_unicos }}"  
 
-#    - name: Filtrar expiração <= 5 dias
-#      set_fact:
-#        accounts_to_rotate: >-
-#          {{
-#            accounts_to_rotate +
-#            [
-#              item.item |
-#              combine(
-#                {
-#                  'days_left':
-#                  (item.output[0].DaysLeft|int),
-#                  'expiration':
-#                  item.output[0].ExpireDate
-#                }
-#              )
-#            ]
-#          }}
-#      loop: "{{ dataexpirasenha_ad.results }}"
-#      when:
-#        - item.output[0].DaysLeft | int <= 5
-
-#    - name: Filtrar expiração <= 5 dias
-#      set_fact:
-#        accounts_to_rotate: >-
-#          {{
-#            accounts_to_rotate + [
-#              {
-#                'username': item.item.username,
-#                'namespace': item.item.namespace,
-#                'secret_name': item.item.secret_name,
-#                'expiration_date': item.output[0].ExpireDate,
-#                'days_left': item.output[0].DaysLeft | int
-#              }
-#            ]
-#          }}
-#      loop: "{{ dataexpirasenha_ad.results }}"
-#      when:
-#        - item.output[0].DaysLeft | int <= 5
-
-#    - name: Usuarios com senha expiradas ou para expirar nos próximos 5 dias
-#      debug:
-#        msg:
-#          - "Usuario: {{ item.username }}"
-#          - "Namespace: {{ item.namespace }}"
-#          - "Secret: {{ item. secret_name }}"
-#          - "Expira em: {{ item.expiration_date }}"
-#          - "Dias restantes: {{ item.days_left }}"
-#      loop: "{{ accounts_to_rotate }}"
-    
-#     - name: Gerar senha
-#       set_fact:
-#         accounts_to_rotate_new: >-
-#           {{
-#             accounts_to_rotate_new|default([])
-#             +
-#             [
-#               item |
-#               combine(
-#                 {
-#                   'new_password':
-#                   lookup(
-#                     'password',
-#                     '/dev/null length=24'
-#                   )
-#                 }
-#               )
-#             ]
-#           }}
-#       loop: "{{ accounts_to_rotate }}"
-    
-#     - name: Trocar senha AD
-#       microsoft.ad.user:
-#         identity: "{{ item.username }}"
-#         password: "{{ item.new_password }}"
-#         update_password: always
-#         state: present
-#       loop: "{{ accounts_to_rotate_new }}"
-
-# - name: Atualizar OpenShift
-#   hosts: localhost
-#   gather_facts: false
-
-#   tasks:
-
-#     - name: Atualizar Secret
-#       kubernetes.core.k8s:
-#         state: present
-#         definition:
-#           apiVersion: v1
-#           kind: Secret
-#           metadata:
-#             namespace: "{{ item.namespace }}"
-#             name: "{{ item.secret_name }}"
-#           type: Opaque
-#           stringData:
-#             username: "{{ item.username }}"
-#             password: "{{ item.new_password }}"
-#       loop: "{{ hostvars['scl.corp'].rotated_accounts }}"
+    - name: Usuarios com senha expiradas ou para expirar <= 10 dias
+      debug:
+        var: usuarios_agrupados
