@@ -125,7 +125,7 @@
           'username': item.item.username,
           'namespace': item.item.namespace,
           'secret': item.item.secret_name,
-          'exprira_em': ps_data.ExpireDate,
+          'expira_em': ps_data.ExpireDate,
           'days_left': ps_data.DaysLeft
         } ] }}"  
       vars:
