@@ -78,6 +78,12 @@
       loop_control:
         label: "{{ item }}"
 
+    - name: Compartilhar usuarios agrupados
+      set_fact:
+        usuarios_agrupados: "{{ usuarios_agrupados }}"
+      delegate_facts: true
+      delegate_to: 10.83.103.61
+      
 - name: Processar contas
   hosts: windows
   gather_facts: false
@@ -110,7 +116,7 @@
       vars:
         remote_user: "{{ ansible_user }}"
         remote_password: "{{ ansible_password }}"
-      loop: "{{ usuarios_agrupados }}"
+      loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
     - name: inicializar lista
@@ -128,8 +134,9 @@
           references: "{{ item.item.references }}"
           expira_data: "{{ ps_data.ExpireDate }}"
           days_left: "{{ ps_data.DaysLeft }}"
-      loop: "{{ dataexpirasenha_ad }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
       when:
+        - ps_data.DaysLeft != 'senha nunca expira'
         - (ps_data.DaysLeft | int) >= 0
         - (ps_data.DaysLeft | int) <= 10
 
@@ -143,9 +150,7 @@
                 'new_password':
                 lookup(
                   'password',
-                  '/dev/null',
-                  lenght=20,
-                  chars='ascii_letters,digits'
+                  '/dev/null length=20 chars=ascii_letters,digits,punctuation'
                 )
               })
             ]
@@ -165,12 +170,17 @@
             New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
               [System.DirectoryServices.AccountManagement.ContextType]::Domain,
               "scl.corp",
-              $user
+              $user,
               $oldPassword
             )
           if (-not $context.ValidateCredentials($user,$oldPassword)) {
             throw "Senha atual invalida"
           }
+          $principal =
+          [System.DirectoryServices.AccountManagement.UserPrincipal]::FindByIdentity(
+            $context,
+            $user
+          )
           $principal.ChangePassword(
             $oldPassword,
             $newPassword
@@ -192,13 +202,15 @@
           kind: Secret
           type: Opaque
           metadata:
-            namesprace: "{{ item.1.namespace }}"
+            namespace: "{{ item.1.namespace }}"
             name: "{{ item.1.secret_name }}"
           data:
             username: "{{ item.0.username | b64encode }}"
             password: "{{ item.0.new_password | b64encode }}"
       loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
       register: secrets_updates
+      delegate_to: localhost
+      run_once: false
 
     - name: iniciando relatorio
       set_fact:
