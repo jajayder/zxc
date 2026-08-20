@@ -99,24 +99,17 @@
           username: "{{ item }}"
           password: >-
             {{
-              application_accounts
-                | selectattr('username', 'equalto', item)
-                | map(attribute='password')
-                | first
+              (
+                application_accounts
+                  | selectattr('username', 'equalto', item)
+                  | map(attribute='password')
+                  | first
+              ).password
             }}
-          namespace: >-
+          references: >-
             {{
               application_accounts
                 | selectattr('username', 'equalto', item)
-                | map(attribute='namespace')
-                | unique
-                | first
-            }}
-          secret: >-
-            {{
-              application_accounts
-                | selectattr('username', 'equalto', item)
-                | map(attribute='secret_name')
                 | first
             }}
       loop: "{{ usuarios_unicos }}"  
