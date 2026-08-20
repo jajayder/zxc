@@ -77,7 +77,15 @@
       loop: "{{ usuarios_unicos }}" 
       loop_control:
         label: "{{ item }}"
-      
+
+- name: Processar contas
+  hosts: windows
+  gather_facts: false
+  collections:
+    - ansible.windows
+    - microsoft.ad
+    - community.general
+  tasks:
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
