@@ -137,6 +137,10 @@
 
 - name: Montar HTML
   set_fact:
+    html_userpods: []
+    
+- name: Montar HTML
+  set_fact:
     html_userpods: |
       <html>
       <body>
