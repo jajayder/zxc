@@ -144,7 +144,7 @@
         html_userpods: |
           <html>
           <body>
-          <h2> Olá! Usuarios com senha a vencer ( <= 5 dias ) - via automação </h2>
+          <h5> Olá! Usuários com senha <= 5 dias para expirar - via automação </h5>
           <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
             <tr bgcolor="#D9EAD3">
               <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
@@ -179,7 +179,7 @@
         from: awx@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
-        subject: Aplic-users OCPD1 com senha a vencer <=5 dias - {{ now(fmt='%d/%m/%Y') }} 
+        subject: Expiração de credenciais - Aplic-users OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
           "{{ html_userpods }}"
           "{{ ansible_user }}"
