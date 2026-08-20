@@ -47,6 +47,32 @@
         application_accounts: "{{ application_accounts }}"
       delegate_facts: true
       delegate_to: 10.83.103.61
+   
+    - name: Obter usuários únicos
+      set_fact:
+        usuarios_unicos: "{{ application_accounts | map(attribute='username') | unique | list }}"
+
+    - name: inicializar agrupamento
+      set_fact:
+        usuarios_agrupados: []
+
+    - name: agrupar por usuario
+      set_fact:
+        usuarios_agrupados: "{{ usuarios_agrupados + [ resultado ] }}"
+      vars:
+        contas_usuario: >-
+          {{
+            application_accounts
+            | selectattr('username', 'equalto', item)
+            | list
+          }}
+        resultado: 
+          username: "{{ item }}"
+          password: "{{ contas_usuario[0].password }}"
+          references: "{{ contas_usuario }}"
+      loop: "{{ usuarios_unicos }}" 
+      loop_control:
+        label: "{{ item }}"
       
 - name: Processar contas
   hosts: windows
@@ -80,35 +106,96 @@
       vars:
         remote_user: "{{ ansible_user }}"
         remote_password: "{{ ansible_password }}"
-      loop: "{{ application_accounts }}"
+      loop: "{{ usuarios_agrupados }}"
       register: dataexpirasenha_ad
 
-    - name: Obter usuários únicos
+    - name: inicializar lista
       set_fact:
-        usuarios_unicos: "{{ application_accounts | map(attribute='username') | unique | list }}"
+        usuarios_vencendo: []
 
-    - name: inicializar agrupamento
+    - name: filtrar usuarios
       set_fact:
-        usuarios_agrupados: []
-
-    - name: agrupar por usuario
-      set_fact:
-        usuarios_agrupados: "{{ usuarios_agrupados + [ resultado ] }}"
+        usuarios_vencendo: "{{ usuarios_vencendo + [usuario ] }}"
       vars:
-        contas_usuario: >-
-          {{
-            application_accounts
-            | selectattr('username', 'equalto', item)
-            | list
-          }}
-        resultado: 
-          username: "{{ item }}"
-          password: "{{ contas_usuario[0].password }}"
-          references: "{{ contas_usuario }}"
-      loop: "{{ usuarios_unicos }}" 
-      loop_control:
-        label: "{{ item }}"
+        ps_data: "{{ item.output[0] | from_json }}"
+        usuario:
+          username: "{{ item.item.username }}"
+          password: "{{ item.item.password }}"
+          references: "{{ item.item.references }}"
+          expira_data: "{{ ps_data.ExpireDate }}"
+          days_left: "{{ ps_data.DaysLeft }}"
+      loop: "{{ dataexpirasenha_ad }}"
+      when:
+        - (ps_data.DaysLeft | int) >= 0
+        - (ps_data.DaysLeft | int) <= 10
 
-    - name: secrets por usuario
-      debug:
-        var: usuarios_agrupados
+    - name: Gerar senha
+      set_fact:
+        usuarios_vencendo_com_senha: >-
+          {{
+            usuarios_vencendo_com_senha | default ([]) +
+            [
+              item | combine ({
+                'new_password':
+                lookup(
+                  'password',
+                  '/dev/null',
+                  lenght=20,
+                  chars='ascii_letters,digits'
+                )
+              })
+            ]
+          }}
+      loop: "{{ usuarios_vencendo }}"
+
+    - name: Alterando senha do proprio usuario
+      ansible.windows.win_powershell:
+        script: |
+          Add-type -AssemblyName System.DirectoryServices.AccountManagement
+
+          $user = "{{ item.username }}"
+          $oldPassword = "{{ item.password }}"
+          $newPassword = "{{ item.new_password }}"
+
+          $context = 
+            New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
+              [System.DirectoryServices.AccountManagement.ContextType]::Domain,
+              "scl.corp",
+              $user
+              $oldPassword
+            )
+          if (-not $context.ValidateCredentials($user,$oldPassword)) {
+            throw "Senha atual invalida"
+          }
+          $principal.ChangePassword(
+            $oldPassword,
+            $newPassword
+          )
+          $principal.Save()
+
+          @{
+            Username=$user
+            Changed=$true
+          } | ConvertTo-Json -Compress
+      loop: "{{ usuarios_vencendo_com_senha }}"
+      register: alteracao_senha
+
+    - name: Atualizando Secrets
+      kubernets.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          type: Opaque
+          metadata:
+            namesprace: "{{ item.1.namespace }}"
+            name: "{{ item.1.secret_name }}"
+          data:
+            username: "{{ item.0.username | b64encode }}"
+            password: "{{ item.0.new_password | b64encode }}"
+      loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
+
+            
+                  
+        
+
