@@ -263,7 +263,7 @@
         subject: Relatorio de credenciais atualizadas OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
           "{{ html_userpods }}"
-          "{{ ansible_user }}"
+#          "{{ ansible_user }}"
       delegate_to: localhost
       run_once: true
       when: relatorio_alteracoes | length > 0
