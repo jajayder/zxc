@@ -302,7 +302,7 @@
           <html>
           <body>
           <script>
-            if (!relatorio_alteracoes || relatorio_alteracoes.length == 0){
+            if   (!relatorio_alteracoes || relatorio_alteracoes.length == 0){
               <h5 style="background:green;color:white"> Olá! Nenhum usuário requer atualização de credencial :)!</h5>
 
             } else {
