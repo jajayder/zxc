@@ -250,12 +250,13 @@
     - name: montando relatorio total
       set_fact:
         relatorio_todos: "{{ relatorio_todos + [ {
-          'username': item.item.0.username,
-          'namespace': item.item.1.namespace,
-          'secret_name': item.item.1.secret_name,
-          'days_left': item.item.1.days_left
+          'username': item.username,
+          'namespace': item.namespace,
+          'secret_name': item.secret_name,
+          'days_left': >-
+            {{ dataexpirasenha_ad[item.username].days_left }}
         } ] }}"
-      loop: "{{ todos_usuarios.results }}"
+      loop: "{{ hostvars['10.83.103.61'].application_accounts }}"  
       when: not item.failed
 
     - name: Montar HTML todos
