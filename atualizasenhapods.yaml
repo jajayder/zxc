@@ -119,6 +119,24 @@
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
+     - name: inicializar lista
+      set_fact:
+        usuarios_todos: []
+
+    - name: filtrar usuarios
+      set_fact:
+        usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
+        usuario:
+          username: "{{ item.item.username }}"
+          password: "{{ item.item.password }}"
+          references: "{{ item.item.references }}"
+          expira_data: "{{ ps_data.ExpireDate }}"
+          days_left: "{{ ps_data.DaysLeft }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
+      when:
+    
     - name: inicializar lista
       set_fact:
         usuarios_vencendo: []
@@ -140,78 +158,106 @@
         - (ps_data.DaysLeft | int) >= 0
         - (ps_data.DaysLeft | int) <= 10
 
-    - name: Gerar senha
+    # - name: Gerar senha
+    #   set_fact:
+    #     usuarios_vencendo_com_senha: >-
+    #       {{
+    #         usuarios_vencendo_com_senha | default ([]) +
+    #         [
+    #           item | combine ({
+    #             'new_password':
+    #             lookup(
+    #               'password',
+    #               '/dev/null length=20 chars=ascii_letters,digits,punctuation'
+    #             )
+    #           })
+    #         ]
+    #       }}
+    #   loop: "{{ usuarios_vencendo }}"
+
+    # - name: Alterando senha do proprio usuario
+    #   ansible.windows.win_powershell:
+    #     script: |
+    #       Add-type -AssemblyName System.DirectoryServices.AccountManagement
+
+    #       $user = "{{ item.username }}"
+    #       $oldPassword = "{{ item.password }}"
+    #       $newPassword = "{{ item.new_password }}"
+
+    #       $context = 
+    #         New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
+    #           [System.DirectoryServices.AccountManagement.ContextType]::Domain,
+    #           "scl.corp",
+    #           $user,
+    #           $oldPassword
+    #         )
+    #       if (-not $context.ValidateCredentials($user,$oldPassword)) {
+    #         throw "Senha atual invalida"
+    #       }
+    #       $principal =
+    #       [System.DirectoryServices.AccountManagement.UserPrincipal]::FindByIdentity(
+    #         $context,
+    #         $user
+    #       )
+    #       $principal.ChangePassword(
+    #         $oldPassword,
+    #         $newPassword
+    #       )
+    #       $principal.Save()
+
+    #       @{
+    #         Username=$user
+    #         Changed=$true
+    #       } | ConvertTo-Json -Compress
+    #   loop: "{{ usuarios_vencendo_com_senha }}"
+    #   register: alteracao_senha
+
+    # - name: Atualizando Secrets
+    #   kubernetes.core.k8s:
+    #     state: present
+    #     definition:
+    #       apiVersion: v1
+    #       kind: Secret
+    #       type: Opaque
+    #       metadata:
+    #         namespace: "{{ item.1.namespace }}"
+    #         name: "{{ item.1.secret_name }}"
+    #       data:
+    #         username: "{{ item.0.username | b64encode }}"
+    #         password: "{{ item.0.new_password | b64encode }}"
+    #   loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
+    #   register: secrets_updates
+    #   delegate_to: localhost
+    #   run_once: false
+
+    - name: Montar HTML TODOS USUARIOS
       set_fact:
-        usuarios_vencendo_com_senha: >-
-          {{
-            usuarios_vencendo_com_senha | default ([]) +
-            [
-              item | combine ({
-                'new_password':
-                lookup(
-                  'password',
-                  '/dev/null length=20 chars=ascii_letters,digits,punctuation'
-                )
-              })
-            ]
-          }}
-      loop: "{{ usuarios_vencendo }}"
-
-    - name: Alterando senha do proprio usuario
-      ansible.windows.win_powershell:
-        script: |
-          Add-type -AssemblyName System.DirectoryServices.AccountManagement
-
-          $user = "{{ item.username }}"
-          $oldPassword = "{{ item.password }}"
-          $newPassword = "{{ item.new_password }}"
-
-          $context = 
-            New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
-              [System.DirectoryServices.AccountManagement.ContextType]::Domain,
-              "scl.corp",
-              $user,
-              $oldPassword
-            )
-          if (-not $context.ValidateCredentials($user,$oldPassword)) {
-            throw "Senha atual invalida"
-          }
-          $principal =
-          [System.DirectoryServices.AccountManagement.UserPrincipal]::FindByIdentity(
-            $context,
-            $user
-          )
-          $principal.ChangePassword(
-            $oldPassword,
-            $newPassword
-          )
-          $principal.Save()
-
-          @{
-            Username=$user
-            Changed=$true
-          } | ConvertTo-Json -Compress
-      loop: "{{ usuarios_vencendo_com_senha }}"
-      register: alteracao_senha
-
-    - name: Atualizando Secrets
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Secret
-          type: Opaque
-          metadata:
-            namespace: "{{ item.1.namespace }}"
-            name: "{{ item.1.secret_name }}"
-          data:
-            username: "{{ item.0.username | b64encode }}"
-            password: "{{ item.0.new_password | b64encode }}"
-      loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
-      register: secrets_updates
-      delegate_to: localhost
-      run_once: false
-
+        html_todosuserpods: |
+          <html>
+          <body>
+          <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
+          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+            <tr bgcolor="#D9EAD3">
+              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Expira em (dias)</th>
+            </tr>
+            {% for item in usuario_todos %}
+            <tr>
+              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.item.1.days_left }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          <b> TOTAL DE USUARIO NOS SECRETS EM OPCD1:</b>
+          {{ usuario_todos | length }}
+          
+          </body>
+          </html>
+    
     - name: iniciando relatorio
       set_fact:
         relatorio_alteracoes: []
@@ -231,6 +277,11 @@
         html_userpods: |
           <html>
           <body>
+          <script>
+            if (!relatorio_alteracoes || relatorio_alteracoes.length == 0){
+              <h5 style="background:green;color:white"> Olá! Nenhum usuário requer atualização de credencial :)!</h5>
+
+            } else {
           <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
           <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
             <tr bgcolor="#D9EAD3">
@@ -248,7 +299,8 @@
           </table>
           <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
           {{ relatorio_alteracoes | length }}
-          
+          }
+          </script>
           </body>
           </html>
 
@@ -257,11 +309,13 @@
         host: mail.energisa.com.br 
         port: 25
         subtype: html
-        from: awx@energisa.com.br 
+        from: iac-infra@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
         subject: Relatorio de credenciais atualizadas OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
+          "{{ html_todosuserpods }}"
+          -----------------------------------------------
           "{{ html_userpods }}"
 #          "{{ ansible_user }}"
       delegate_to: localhost
