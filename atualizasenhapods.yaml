@@ -252,7 +252,7 @@
         relatorio_todos: "{{ relatorio_todos + [ {
           'username': item.item.0.username,
           'namespace': item.item.1.namespace,
-          'secret_name': item.item.1.secret_name
+          'secret_name': item.item.1.secret_name,
           'days_left': item.item.1.days_left
         } ] }}"
       loop: "{{ todos_usuarios.results }}"
