@@ -243,21 +243,51 @@
       when: 
         - usuarios_vencendo_com_senha is defined     
 
+    - name: Inicializar mapa expiracao
+      set_fact:
+        expiracao_usuarios: {}
+
+    - name: Montar mapa expiracao
+      set_fact:
+        expiracao_usuarios: >-
+          {{
+            expiracao_usuarios |
+            combine(
+              {
+                ps_data.Username: {
+                  'days_left': ps_data.DaysLeft,
+                  'expire_date': ps_data.ExpireDate
+                }
+              }
+            )
+          }}
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
+      when:
+        - item.output is defined
+        - item.output | length > 0
+    
     - name: iniciando relatorio total
       set_fact:
         relatorio_todos: []
         
     - name: montando relatorio total
-      vars:
-        ps_data: "{{ item.output[0] | from_json }}"
       set_fact:
-        relatorio_todos: "{{ relatorio_todos + [ {
-          'username': item.username,
-          'namespace': item.namespace,
-          'secret_name': item.secret_name,
-          'days_left': dataexpirasenha_ad[item.username].ps_data.DaysLeft
-        } ] }}"
-      loop: "{{ hostvars['10.83.103.61'].application_accounts }}"  
+        relatorio_todos: "{{ relatorio_todos + [ registro ] }}"
+      vars:
+        registro:
+          username: "{{ item.username }}"
+          namespace: "{{ item.namespace }}"
+          secret_name: "{{ item.secret_name }}"
+          days_left: >-
+            {{
+              expiracao_usuarios[item.username].days_left
+              if item.username in expiracao_usuarios
+              else 'N/A'
+            }}
+      loop: "{{ hostvars['10.83.103.61'].application_accounts }}"
+`
 
     - name: Montar HTML todos
       set_fact:
