@@ -248,12 +248,14 @@
         relatorio_todos: []
         
     - name: montando relatorio total
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
       set_fact:
         relatorio_todos: "{{ relatorio_todos + [ {
           'username': item.username,
           'namespace': item.namespace,
           'secret_name': item.secret_name,
-          'days_left': todos_usuarios[item.username].days_left
+          'days_left': ps_data.dataexpirasenha_ad[item.username].DaysLeft
         } ] }}"
       loop: "{{ hostvars['10.83.103.61'].application_accounts }}"  
 
