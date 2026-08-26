@@ -241,7 +241,7 @@
       delegate_to: localhost
       run_once: false
       when: 
-        - usuarios_vencendo is defined      
+        - usuarios_vencendo_com_senha is defined     
 
     - name: iniciando relatorio total
       set_fact:
