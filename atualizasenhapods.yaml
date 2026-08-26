@@ -293,7 +293,7 @@
         html_todosuserpods: |
           <html>
           <body>
-            <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
+            <h5> Abaixo todos os usuários: </h5>
             <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
               <tr bgcolor="#D9EAD3">
                 <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
@@ -360,6 +360,7 @@
           {{ relatorio_alteracoes | length }}
                     }
           </script>
+          <br>
           </body>
           </html>
 #      when: 
@@ -375,10 +376,11 @@
           - jayder.carneiro@energisaterceiros.com.br
         subject: Relatorio de credenciais OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
-          Todas:
           "{{ html_todosuserpods }}"
+          <br>
           ------------------------------
-          Atualizadas:
+          <br>
+          Atualizadas:<br>
           "{{ html_userpods }}"
 #          "{{ ansible_user }}"
       delegate_to: localhost
