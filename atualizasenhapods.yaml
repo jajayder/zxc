@@ -383,8 +383,4 @@
 #          "{{ ansible_user }}"
       delegate_to: localhost
       run_once: true
-      when: relatorio_alteracoes | length > 0
-
-            
-                  
-        
+#      when: relatorio_alteracoes | length > 0        
