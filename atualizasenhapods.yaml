@@ -337,7 +337,7 @@
           <html>
           <body>
           <script>
-            if (!relatorio_alteracoes || relatorio_alteracoes.length == 0){
+            if (usuarios_vencendo_com_senha is not defined || usuarios_vencendo_com_senha.length == 0){
               <h5 style="background:green;color:white"> Olá! Nenhum usuário requer atualização de credencial :)!</h5>
 
             } else {
@@ -362,8 +362,8 @@
           </script>
           </body>
           </html>
-      when: 
-        - usuarios_vencendo_com_senha is defined    
+#      when: 
+#        - usuarios_vencendo_com_senha is defined    
 
     - name: Enviando email do relatorio
       community.general.mail:
