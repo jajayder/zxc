@@ -287,7 +287,6 @@
               else 'N/A'
             }}
       loop: "{{ hostvars['10.83.103.61'].application_accounts }}"
-`
 
     - name: Montar HTML todos
       set_fact:
