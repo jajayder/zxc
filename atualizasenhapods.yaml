@@ -119,22 +119,40 @@
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
-#    - name: inicializar lista todos
-#      set_fact:
-#        usuarios_todos: []
+    - name: inicializar lista todos
+      set_fact:
+        usuarios_todos: []
 
-#    - name: filtrar usuarios todos
-#      set_fact:
-#        usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
-#      vars:
-#        ps_data: "{{ item.output[0] | from_json }}"
-#        usuario:
-#          username: "{{ item.item.username }}"
-#          password: "{{ item.item.password }}"
-#          references: "{{ item.item.references }}"
-#          expira_data: "{{ ps_data.ExpireDate }}"
-#          days_left: "{{ ps_data.DaysLeft }}"
-#      loop: "{{ dataexpirasenha_ad.results }}"
+    - name: filtrar usuarios todos
+      set_fact:
+        usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
+        usuario:
+          username: "{{ item.item.username }}"
+          days_left: "{{ ps_data.DaysLeft }}"
+          expire_date: "{{ ps_data.ExpireDate }}"
+          references: "{{ item.item.references }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
+      when:
+        - item.output is defined
+        - item.output | length > 0
+
+    - name: Inicializar relatorio completo
+      set_fact:
+        relatorio_todos: []
+    
+    - name: Montar relatorio completo
+      set_fact:
+        relatorio_todos: "{{ relatorio_todos + [ registro ] }}"
+      vars:
+        registro:
+          username: "{{ item.0.username }}"
+          days_left: "{{ item.0.days_left }}"
+          expire_date: "{{ item.0.expire_date }}"
+          namespace: "{{ item.1.namespace }}"
+          secret_name: "{{ item.1.secret_name }}"
+      loop: "{{ usuarios_todos | subelements('references') }}"
     
     - name: inicializar lista
       set_fact:
@@ -229,31 +247,38 @@
     #   delegate_to: localhost
     #   run_once: false
 
-    - name: Montar HTML TODOS USUARIOS
+    - name: Montar HTML TODOS
       set_fact:
         html_todosuserpods: |
           <html>
           <body>
-          <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
-          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
-            <tr bgcolor="#D9EAD3">
-              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
-              <th style="background:#8FAADC;border:1px solid #000;">Expira em (dias)</th>
+    
+          <h3>Todos os usuários aplic-* encontrados</h3>
+    
+          <table border="1" cellpadding="3" cellspacing="0">
+            <tr bgcolor="#8FAADC">
+              <th>Usuário</th>
+              <th>Namespace</th>
+              <th>Secret</th>
+              <th>Expira em</th>
+              <th>Dias restantes</th>
             </tr>
-            {% for item in usuario_todos %}
+    
+            {% for item in relatorio_todos %}
             <tr>
-              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
-              <td style="border:1px solid #000;text-align:center;">{{ item.item.1.days_left }}</td>
+              <td>{{ item.username }}</td>
+              <td>{{ item.namespace }}</td>
+              <td>{{ item.secret_name }}</td>
+              <td>{{ item.expire_date }}</td>
+              <td>{{ item.days_left }}</td>
             </tr>
             {% endfor %}
+    
           </table>
-          <b> TOTAL DE USUARIO NOS SECRETS EM OPCD1:</b>
-          {{ usuario_todos | length }}
-          
+    
+          <br>
+          Total: {{ relatorio_todos | length }}
+    
           </body>
           </html>
     
@@ -267,7 +292,7 @@
           'username': item.item.0.username,
           'namespace': item.item.1.namespace,
           'secret_name': item.item.1.secret_name
-        } ] }}"
+        } ] }}"  
       loop: "{{ secrets_updates.results }}"
       when: not item.failed
 
@@ -314,8 +339,8 @@
         subject: Relatorio de credenciais atualizadas OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
           "{{ html_todosuserpods }}"
-          -----------------------------------------------
-          "{{ html_userpods }}"
+            -----------------------------------------------
+            "{{ html_userpods }}"
 #          "{{ ansible_user }}"
       delegate_to: localhost
       run_once: true
