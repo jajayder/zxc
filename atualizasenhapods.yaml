@@ -119,7 +119,7 @@
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
-     - name: inicializar lista
+    - name: inicializar lista
       set_fact:
         usuarios_todos: []
 
@@ -140,7 +140,7 @@
     - name: inicializar lista
       set_fact:
         usuarios_vencendo: []
-
+    
     - name: filtrar usuarios
       set_fact:
         usuarios_vencendo: "{{ usuarios_vencendo + [usuario ] }}"
