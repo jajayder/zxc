@@ -119,11 +119,11 @@
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
-    - name: inicializar lista
+    - name: inicializar lista todos
       set_fact:
         usuarios_todos: []
 
-    - name: filtrar usuarios
+    - name: filtrar usuarios todos
       set_fact:
         usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
       vars:
@@ -135,7 +135,6 @@
           expira_data: "{{ ps_data.ExpireDate }}"
           days_left: "{{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
-      when:
     
     - name: inicializar lista
       set_fact:
