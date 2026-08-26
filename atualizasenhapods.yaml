@@ -119,22 +119,22 @@
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
-    - name: inicializar lista todos
-      set_fact:
-        usuarios_todos: []
+#    - name: inicializar lista todos
+#      set_fact:
+#        usuarios_todos: []
 
-    - name: filtrar usuarios todos
-      set_fact:
-        usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
-      vars:
-        ps_data: "{{ item.output[0] | from_json }}"
-        usuario:
-          username: "{{ item.item.username }}"
-          password: "{{ item.item.password }}"
-          references: "{{ item.item.references }}"
-          expira_data: "{{ ps_data.ExpireDate }}"
-          days_left: "{{ ps_data.DaysLeft }}"
-      loop: "{{ dataexpirasenha_ad.results }}"
+#    - name: filtrar usuarios todos
+#      set_fact:
+#        usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
+#      vars:
+#        ps_data: "{{ item.output[0] | from_json }}"
+#        usuario:
+#          username: "{{ item.item.username }}"
+#          password: "{{ item.item.password }}"
+#          references: "{{ item.item.references }}"
+#          expira_data: "{{ ps_data.ExpireDate }}"
+#          days_left: "{{ ps_data.DaysLeft }}"
+#      loop: "{{ dataexpirasenha_ad.results }}"
     
     - name: inicializar lista
       set_fact:
