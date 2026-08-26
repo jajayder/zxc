@@ -119,6 +119,24 @@
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
 
+    - name: inicializar lista todos
+      set_fact:
+        usuarios_todos: []
+
+    - name: filtrar usuarios todos
+      set_fact:
+        usuarios_todos: "{{ usuarios_todos + [usuario ] }}"
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
+        usuario:
+          username: "{{ item.item.username }}"
+          password: "{{ item.item.password }}"
+          references: "{{ item.item.references }}"
+          expira_data: "{{ ps_data.ExpireDate }}"
+          days_left: "{{ ps_data.DaysLeft }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
+      register: todos_usuarios
+    
     - name: inicializar lista
       set_fact:
         usuarios_vencendo: []
@@ -135,10 +153,10 @@
           expira_data: "{{ ps_data.ExpireDate }}"
           days_left: "{{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
-#      when:
-#        - ps_data.DaysLeft != 'senha nunca expira'
-#        - (ps_data.DaysLeft | int) >= 0
-#        - (ps_data.DaysLeft | int) <= 10
+      when:
+        - ps_data.DaysLeft != 'senha nunca expira'
+        - (ps_data.DaysLeft | int) >= 0
+        - (ps_data.DaysLeft | int) <= 10
      
     - name: debugando
       debug:
@@ -216,6 +234,46 @@
       # delegate_to: localhost
       # run_once: false
 
+    - name: iniciando relatorio total
+      set_fact:
+        relatorio_todos: []
+        
+    - name: montando relatorio total
+      set_fact:
+        relatorio_todos: "{{ relatorio_todos + [ {
+          'username': item.item.0.username,
+          'namespace': item.item.1.namespace,
+          'secret_name': item.item.1.secret_name
+          'days_left': item.item.1.days_left
+        } ] }}"
+      loop: "{{ todos_usuarios.results }}"
+      when: not item.failed
+
+    - name: Montar HTML todos
+      set_fact:
+        html_todosuserpods: |
+          <html>
+          <body>
+          <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
+          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+            <tr bgcolor="#D9EAD3">
+              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Expira em (dias)</th>
+            </tr>
+            {% for item in relatorio_todos %}
+            <tr>
+              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.days_left }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
+          {{ usuario_todos | length }}
+    
     - name: iniciando relatorio
       set_fact:
         relatorio_alteracoes: []
@@ -235,6 +293,11 @@
         html_userpods: |
           <html>
           <body>
+          <script>
+            if (!relatorio_alteracoes || relatorio_alteracoes.length == 0){
+              <h5 style="background:green;color:white"> Olá! Nenhum usuário requer atualização de credencial :)!</h5>
+
+            } else {
           <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
           <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
             <tr bgcolor="#D9EAD3">
@@ -252,7 +315,8 @@
           </table>
           <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
           {{ relatorio_alteracoes | length }}
-          
+                    }
+          </script>
           </body>
           </html>
 
@@ -261,11 +325,15 @@
         host: mail.energisa.com.br 
         port: 25
         subtype: html
-        from: awx@energisa.com.br 
+        from: iac-infra@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
-        subject: Relatorio de credenciais atualizadas OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
+        subject: Relatorio de credenciais OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
+          Todas:
+          "{{ html_todosuserpods }}"
+          ------------------------------
+          Atualizadas:
           "{{ html_userpods }}"
 #          "{{ ansible_user }}"
       delegate_to: localhost
