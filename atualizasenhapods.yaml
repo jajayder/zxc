@@ -310,8 +310,11 @@
             </tr>
             {% endfor %}
           </table>
-          <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
+          <b> TOTAL DE SECRETS EM OPCD1:</b>
           {{ usuario_todos | length }}
+          </body>
+          </html>
+          
     
     - name: iniciando relatorio
       set_fact:
