@@ -135,10 +135,10 @@
           expira_data: "{{ ps_data.ExpireDate }}"
           days_left: "{{ ps_data.DaysLeft }}"
       loop: "{{ dataexpirasenha_ad.results }}"
-      when:
-        - ps_data.DaysLeft != 'senha nunca expira'
-        - (ps_data.DaysLeft | int) >= 0
-        - (ps_data.DaysLeft | int) <= 10
+#      when:
+#        - ps_data.DaysLeft != 'senha nunca expira'
+#        - (ps_data.DaysLeft | int) >= 0
+#        - (ps_data.DaysLeft | int) <= 10
      
     - name: debugando
       debug:
