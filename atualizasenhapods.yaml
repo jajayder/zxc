@@ -329,7 +329,6 @@
         } ] }}"
       loop: "{{ secrets_updates.results }}"
       when: 
-        - not item.failed
         - usuarios_vencendo_com_senha is defined     
 
     - name: Montar HTML
