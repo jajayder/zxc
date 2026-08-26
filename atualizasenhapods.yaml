@@ -162,77 +162,77 @@
       debug:
         var: usuarios_vencendo
 
-    # - name: Gerar senha
-      # set_fact:
-        # usuarios_vencendo_com_senha: >-
-          # {{
-            # usuarios_vencendo_com_senha | default ([]) +
-            # [
-              # item | combine ({
-                # 'new_password':
-                # lookup(
-                  # 'password',
-                  # '/dev/null length=20 chars=ascii_letters,digits,punctuation'
-                # )
-              # })
-            # ]
-          # }}
-      # loop: "{{ usuarios_vencendo }}"
+    - name: Gerar senha
+      set_fact:
+        usuarios_vencendo_com_senha: >-
+          {{
+            usuarios_vencendo_com_senha | default ([]) +
+            [
+              item | combine ({
+                'new_password':
+                lookup(
+                  'password',
+                  '/dev/null length=20 chars=ascii_letters,digits,punctuation'
+                )
+              })
+            ]
+          }}
+      loop: "{{ usuarios_vencendo }}"
 
-    # - name: Alterando senha do proprio usuario
-      # ansible.windows.win_powershell:
-        # script: |
-          # Add-type -AssemblyName System.DirectoryServices.AccountManagement
+    - name: Alterando senha do proprio usuario
+      ansible.windows.win_powershell:
+        script: |
+          Add-type -AssemblyName System.DirectoryServices.AccountManagement
 
-          # $user = "{{ item.username }}"
-          # $oldPassword = "{{ item.password }}"
-          # $newPassword = "{{ item.new_password }}"
+          $user = "{{ item.username }}"
+          $oldPassword = "{{ item.password }}"
+          $newPassword = "{{ item.new_password }}"
 
-          # $context = 
-            # New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
-              # [System.DirectoryServices.AccountManagement.ContextType]::Domain,
-              # "scl.corp",
-              # $user,
-              # $oldPassword
-            # )
-          # if (-not $context.ValidateCredentials($user,$oldPassword)) {
-            # throw "Senha atual invalida"
-          # }
-          # $principal =
-          # [System.DirectoryServices.AccountManagement.UserPrincipal]::FindByIdentity(
-            # $context,
-            # $user
-          # )
-          # $principal.ChangePassword(
-            # $oldPassword,
-            # $newPassword
-          # )
-          # $principal.Save()
+          $context = 
+            New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
+              [System.DirectoryServices.AccountManagement.ContextType]::Domain,
+              "scl.corp",
+              $user,
+              $oldPassword
+            )
+          if (-not $context.ValidateCredentials($user,$oldPassword)) {
+            throw "Senha atual invalida"
+          }
+          $principal =
+          [System.DirectoryServices.AccountManagement.UserPrincipal]::FindByIdentity(
+            $context,
+            $user
+          )
+          $principal.ChangePassword(
+            $oldPassword,
+            $newPassword
+          )
+          $principal.Save()
 
-          # @{
-            # Username=$user
-            # Changed=$true
-          # } | ConvertTo-Json -Compress
-      # loop: "{{ usuarios_vencendo_com_senha }}"
-      # register: alteracao_senha
+          @{
+            Username=$user
+            Changed=$true
+          } | ConvertTo-Json -Compress
+      loop: "{{ usuarios_vencendo_com_senha }}"
+      register: alteracao_senha
 
-    # - name: Atualizando Secrets
-      # kubernetes.core.k8s:
-        # state: present
-        # definition:
-          # apiVersion: v1
-          # kind: Secret
-          # type: Opaque
-          # metadata:
-            # namespace: "{{ item.1.namespace }}"
-            # name: "{{ item.1.secret_name }}"
-          # data:
-            # username: "{{ item.0.username | b64encode }}"
-            # password: "{{ item.0.new_password | b64encode }}"
-      # loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
-      # register: secrets_updates
-      # delegate_to: localhost
-      # run_once: false
+    - name: Atualizando Secrets
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          type: Opaque
+          metadata:
+            namespace: "{{ item.1.namespace }}"
+            name: "{{ item.1.secret_name }}"
+          data:
+            username: "{{ item.0.username | b64encode }}"
+            password: "{{ item.0.new_password | b64encode }}"
+      loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
+      register: secrets_updates
+      delegate_to: localhost
+      run_once: false
 
     - name: iniciando relatorio total
       set_fact:
