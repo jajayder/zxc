@@ -1,9 +1,10 @@
 - name: Buscar contas em Secrets
   hosts: localhost
-  gather_facts: false
-
+  gather_facts: true
   collections:
-    - kubernetes.core
+    - ansible.windows
+    - microsoft.ad
+    - community.general
 
   vars:
     applications_prefix: "^aplic-"
@@ -16,11 +17,11 @@
         kind: Secret
         validate_certs: false
       register: secret_data
-
-    - name: Inicializar lista de contas
+    
+    - name: Inicializar lista
       set_fact:
         application_accounts: []
-
+        
     - name: Extrair username e password
       set_fact:
         application_accounts: >-
@@ -37,331 +38,240 @@
           }}
       loop: "{{ secret_data.resources }}"
       when:
-        - item.type | default('') == 'Opaque'
+        - item.type is defined
+        - item.type == 'Opaque'
         - item.data is defined
         - "'username' in item.data"
         - "'password' in item.data"
-        - (item.data.username | b64decode | trim) is match(applications_prefix)
+        - (item.data.username | b64decode) is match(applications_prefix)
       no_log: true
 
-    - name: Obter usuarios únicos
+    - name: Compartilhar lista
       set_fact:
-        usuarios_unicos: >-
-          {{
-            application_accounts
-            | map(attribute='username')
-            | unique
-            | list
-          }}
+        application_accounts: "{{ application_accounts }}"
+      delegate_facts: true
+      delegate_to: 10.83.103.61
+   
+    - name: Obter usuários únicos
+      set_fact:
+        usuarios_unicos: "{{ application_accounts | map(attribute='username') | unique | list }}"
 
-    - name: Inicializar agrupamento
+    - name: inicializar agrupamento
       set_fact:
         usuarios_agrupados: []
 
-    - name: Agrupar usuarios
+    - name: agrupar por usuario
       set_fact:
         usuarios_agrupados: "{{ usuarios_agrupados + [ resultado ] }}"
       vars:
         contas_usuario: >-
           {{
             application_accounts
-            | selectattr('username','equalto',item)
+            | selectattr('username', 'equalto', item)
             | list
           }}
-        resultado:
+        resultado: 
           username: "{{ item }}"
-          password: "{{ contas_usuario | first | default({}) | json_query('password') }}"
+          password: "{{ contas_usuario[0].password }}"
           references: "{{ contas_usuario }}"
-      loop: "{{ usuarios_unicos }}"
-      when:
-        - contas_usuario | length > 0
-      no_log: true
+      loop: "{{ usuarios_unicos }}" 
+      loop_control:
+        label: "{{ item }}"
 
-    - name: Compartilhar fatos com host windows
+    - name: Compartilhar usuarios agrupados
       set_fact:
         usuarios_agrupados: "{{ usuarios_agrupados }}"
-      delegate_to: 10.83.103.61
       delegate_facts: true
-
+      delegate_to: 10.83.103.61
+      
 - name: Processar contas
   hosts: windows
   gather_facts: false
-
   collections:
     - ansible.windows
+    - microsoft.ad
     - community.general
-
-  vars:
-    dias_limite: 10
-
   tasks:
-
-    - name: Consultar expiração no AD
+    - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
-
+          $null = Enable-WSManCredSSP -Role Server -Force
+          $null = Set-Item -path "WSMan:\localhost\Service\Auth\CredSSP" -Value $true
           Import-Module ActiveDirectory
 
-          try {
-
-            $senhaexpira = Get-ADUser `
-              -Identity "{{ item.username }}" `
-              -Server "scl.corp" `
-              -Properties PasswordNeverExpires,"msDS-UserPasswordExpiryTimeComputed"
-
-            if (-not $senhaexpira) {
-              throw "Usuario nao encontrado"
-            }
-
-            if ($senhaexpira.PasswordNeverExpires) {
-
-              $resultado = @{
-                Username   = "{{ item.username }}"
-                ExpireDate = "N/A"
-                DaysLeft   = "senha nunca expira"
-                Success    = $true
-              }
-
-            } else {
-
-              $expiradata =
-                :FromFileTime(
-                  $senhaexpira."msDS-UserPasswordExpiryTimeComputed"
-                )
-
-              $diasrestantes =
-                :Floor(
-                  ($expiradata - (Get-Date)).TotalDays
-                )
-
-              $resultado = @{
-                Username   = "{{ item.username }}"
-                ExpireDate = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
-                DaysLeft   = $diasrestantes
-                Success    = $true
-              }
-            }
-
+          $senhaexpira = Get-ADUser -Identity "{{ item.username }}" -Server "scl.corp" -Properties PasswordNeverExpires, "msDS-UserPasswordExpiryTimeComputed"
+          if ($senhaexpira.PasswordNeverExpires) {
+            $diasrestantes = "senha nunca expira"
+            $expireDateFormatado = "N/A"
+          } else {
+            $expiradata = [datetime]::FromFileTime($senhaexpira."msDS-UserPasswordExpiryTimeComputed")
+            [int]$diasrestantes = [Math]::Floor(($expiradata - (Get-Date)).TotalDays)
+            $expireDateFormatado = $expiradata.ToString("dd-MM-yyyy HH:mm:ss")
           }
-          catch {
-
-            $resultado = @{
-              Username   = "{{ item.username }}"
-              ExpireDate = ""
-              DaysLeft   = ""
-              Success    = $false
-              Error      = $_.Exception.Message
-            }
-
-          }
-
-          $resultado | ConvertTo-Json -Compress
-
-      loop: "{{ hostvars[inventory_hostname].usuarios_agrupados | default([]) }}"
+          @{
+            Username = "{{ item.username }}"
+            ExpireDate = $expireDateFormatado
+            DaysLeft = $diasrestantes
+          } | ConvertTo-Json -Compress
+      vars:
+        remote_user: "{{ ansible_user }}"
+        remote_password: "{{ ansible_password }}"
+      loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
-      changed_when: false
 
-    #################################################################
-    # NORMALIZA RESULTADOS AD
-    #################################################################
-
-    - name: Inicializar resultados AD
-      set_fact:
-        resultados_ad: []
-
-    - name: Tratar retorno do PowerShell
-      set_fact:
-        resultados_ad: "{{ resultados_ad + [ registro ] }}"
-      vars:
-        ps_json: "{{ item.output | join('') | from_json }}"
-        registro:
-          username: "{{ item.item.username }}"
-          password: "{{ item.item.password }}"
-          references: "{{ item.item.references }}"
-          expire_date: "{{ ps_json.ExpireDate }}"
-          days_left: "{{ ps_json.DaysLeft }}"
-          success: "{{ ps_json.Success }}"
-      loop: "{{ dataexpirasenha_ad.results }}"
-      when:
-        - item.output is defined
-        - item.output | length > 0
-
-    #################################################################
-    # TODOS USUÁRIOS
-    #################################################################
-
-    - name: Inicializar relatorio completo
-      set_fact:
-        relatorio_todos: []
-
-    - name: Expandir usuarios x secrets
-      set_fact:
-        relatorio_todos: "{{ relatorio_todos + [ registro ] }}"
-      vars:
-        registro:
-          username: "{{ item.0.username }}"
-          namespace: "{{ item.1.namespace }}"
-          secret_name: "{{ item.1.secret_name }}"
-          expire_date: "{{ item.0.expire_date }}"
-          days_left: "{{ item.0.days_left }}"
-      loop: "{{ resultados_ad | subelements('references') }}"
-
-    #################################################################
-    # SOMENTE VENCENDO
-    #################################################################
-
-    - name: Inicializar usuarios vencendo
+    - name: inicializar lista
       set_fact:
         usuarios_vencendo: []
 
-    - name: Filtrar usuarios vencendo
+    - name: filtrar usuarios
       set_fact:
-        usuarios_vencendo: "{{ usuarios_vencendo + [ item ] }}"
-      loop: "{{ resultados_ad }}"
+        usuarios_vencendo: "{{ usuarios_vencendo + [usuario ] }}"
+      vars:
+        ps_data: "{{ item.output[0] | from_json }}"
+        usuario:
+          username: "{{ item.item.username }}"
+          password: "{{ item.item.password }}"
+          references: "{{ item.item.references }}"
+          expira_data: "{{ ps_data.ExpireDate }}"
+          days_left: "{{ ps_data.DaysLeft }}"
+      loop: "{{ dataexpirasenha_ad.results }}"
       when:
-        - item.success | bool
-        - item.days_left != "senha nunca expira"
-        - item.days_left | string | length > 0
-        - (item.days_left | int) >= 0
-        - (item.days_left | int) <= dias_limite
+        - ps_data.DaysLeft != 'senha nunca expira'
+        - (ps_data.DaysLeft | int) >= 0
+        - (ps_data.DaysLeft | int) <= 10
+     
+    - name: debugando
+      debug:
+        var: usuarios_vencendo
 
-    #################################################################
-    # AQUI ENTRAM AS TASKS DE TROCA DE SENHA
-    #################################################################
+    # - name: Gerar senha
+      # set_fact:
+        # usuarios_vencendo_com_senha: >-
+          # {{
+            # usuarios_vencendo_com_senha | default ([]) +
+            # [
+              # item | combine ({
+                # 'new_password':
+                # lookup(
+                  # 'password',
+                  # '/dev/null length=20 chars=ascii_letters,digits,punctuation'
+                # )
+              # })
+            # ]
+          # }}
+      # loop: "{{ usuarios_vencendo }}"
 
-#    - name: Gerar senha
-#    - name: Alterar senha
-#    - name: Atualizar secrets
-#
-#    register: secrets_updates
+    # - name: Alterando senha do proprio usuario
+      # ansible.windows.win_powershell:
+        # script: |
+          # Add-type -AssemblyName System.DirectoryServices.AccountManagement
 
-    #################################################################
-    # RELATORIO ALTERACOES
-    #################################################################
+          # $user = "{{ item.username }}"
+          # $oldPassword = "{{ item.password }}"
+          # $newPassword = "{{ item.new_password }}"
 
-    - name: Inicializar relatorio alteracoes
+          # $context = 
+            # New-Object System.DirectoryServices.AccountManagement.PrincipalContext(
+              # [System.DirectoryServices.AccountManagement.ContextType]::Domain,
+              # "scl.corp",
+              # $user,
+              # $oldPassword
+            # )
+          # if (-not $context.ValidateCredentials($user,$oldPassword)) {
+            # throw "Senha atual invalida"
+          # }
+          # $principal =
+          # [System.DirectoryServices.AccountManagement.UserPrincipal]::FindByIdentity(
+            # $context,
+            # $user
+          # )
+          # $principal.ChangePassword(
+            # $oldPassword,
+            # $newPassword
+          # )
+          # $principal.Save()
+
+          # @{
+            # Username=$user
+            # Changed=$true
+          # } | ConvertTo-Json -Compress
+      # loop: "{{ usuarios_vencendo_com_senha }}"
+      # register: alteracao_senha
+
+    # - name: Atualizando Secrets
+      # kubernetes.core.k8s:
+        # state: present
+        # definition:
+          # apiVersion: v1
+          # kind: Secret
+          # type: Opaque
+          # metadata:
+            # namespace: "{{ item.1.namespace }}"
+            # name: "{{ item.1.secret_name }}"
+          # data:
+            # username: "{{ item.0.username | b64encode }}"
+            # password: "{{ item.0.new_password | b64encode }}"
+      # loop: "{{ usuarios_vencendo_com_senha | subelements('references') }}"
+      # register: secrets_updates
+      # delegate_to: localhost
+      # run_once: false
+
+    - name: iniciando relatorio
       set_fact:
         relatorio_alteracoes: []
-
-    - name: Montar relatorio alteracoes
+        
+    - name: montando relatorio
       set_fact:
-        relatorio_alteracoes: "{{ relatorio_alteracoes + [ registro ] }}"
-      vars:
-        registro:
-          username: "{{ item.item.0.username }}"
-          namespace: "{{ item.item.1.namespace }}"
-          secret_name: "{{ item.item.1.secret_name }}"
-      loop: "{{ secrets_updates.results | default([]) }}"
-      when:
-        - not (item.failed | default(false))
+        relatorio_alteracoes: "{{ relatorio_alteracoes + [ {
+          'username': item.item.0.username,
+          'namespace': item.item.1.namespace,
+          'secret_name': item.item.1.secret_name
+        } ] }}"
+      loop: "{{ secrets_updates.results }}"
+      when: not item.failed
 
-    #################################################################
-    # HTML TODOS
-    #################################################################
-
-    - name: Montar HTML todos os usuarios
-      set_fact:
-        html_todosuserpods: |
-          <html>
-          <body>
-
-          <h3>Todos os usuários encontrados</h3>
-
-          <table border="1" cellspacing="0" cellpadding="4">
-            <tr bgcolor="#8FAADC">
-              <th>Usuário</th>
-              <th>Namespace</th>
-              <th>Secret</th>
-              <th>Expiração</th>
-              <th>Dias Restantes</th>
-            </tr>
-
-            {% for item in relatorio_todos %}
-            <tr>
-              <td>{{ item.username }}</td>
-              <td>{{ item.namespace }}</td>
-              <td>{{ item.secret_name }}</td>
-              <td>{{ item.expire_date }}</td>
-              <td>{{ item.days_left }}</td>
-            </tr>
-            {% endfor %}
-
-          </table>
-
-          <br>
-          Total de registros: {{ relatorio_todos | length }}
-
-          </body>
-          </html>
-
-    #################################################################
-    # HTML ALTERADOS
-    #################################################################
-
-    - name: Montar HTML alteracoes
+    - name: Montar HTML
       set_fact:
         html_userpods: |
           <html>
           <body>
-
-          {% if relatorio_alteracoes | length == 0 %}
-
-          <h3 style="color:green">
-            Nenhuma senha precisou ser alterada.
-          </h3>
-
-          {% else %}
-
-          <h3>Usuários com senha alterada</h3>
-
-          <table border="1" cellspacing="0" cellpadding="4">
-            <tr bgcolor="#8FAADC">
-              <th>Usuário</th>
-              <th>Namespace</th>
-              <th>Secret</th>
+          <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
+          <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+            <tr bgcolor="#D9EAD3">
+              <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
             </tr>
-
             {% for item in relatorio_alteracoes %}
             <tr>
-              <td>{{ item.username }}</td>
-              <td>{{ item.namespace }}</td>
-              <td>{{ item.secret_name }}</td>
+              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
             </tr>
             {% endfor %}
-
           </table>
-
-          <br>
-          Total alterados: {{ relatorio_alteracoes | length }}
-
-          {% endif %}
-
+          <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
+          {{ relatorio_alteracoes | length }}
+          
           </body>
           </html>
 
-    #################################################################
-    # EMAIL
-    #################################################################
-
-    - name: Enviar email
+    - name: Enviando email do relatorio
       community.general.mail:
-        host: mail.energisa.com.br
+        host: mail.energisa.com.br 
         port: 25
         subtype: html
-        from: iac-infra@energisa.com.br
+        from: awx@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
-        subject: >
-          Relatório Credenciais OCPD1 -
-          {{ now(fmt='%d/%m/%Y') }}
+        subject: Relatorio de credenciais atualizadas OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
-          {{ html_todosuserpods }}
-
-          <br><br>
-          <hr>
-          <br><br>
-
-          {{ html_userpods }}
-
+          "{{ html_userpods }}"
+#          "{{ ansible_user }}"
       delegate_to: localhost
       run_once: true
+      when: relatorio_alteracoes | length > 0
+
+            
+                  
+        
