@@ -161,6 +161,8 @@
     - name: debugando
       debug:
         var: usuarios_vencendo
+      when: 
+        - usuarios_vencendo is defined
 
     - name: Gerar senha
       set_fact:
@@ -178,6 +180,8 @@
             ]
           }}
       loop: "{{ usuarios_vencendo }}"
+      when: 
+        - usuarios_vencendo is defined
 
     - name: Alterando senha do proprio usuario
       ansible.windows.win_powershell:
@@ -215,6 +219,8 @@
           } | ConvertTo-Json -Compress
       loop: "{{ usuarios_vencendo_com_senha }}"
       register: alteracao_senha
+      when: 
+        - usuarios_vencendo is defined
 
     - name: Atualizando Secrets
       kubernetes.core.k8s:
@@ -233,6 +239,8 @@
       register: secrets_updates
       delegate_to: localhost
       run_once: false
+      when: 
+        - usuarios_vencendo is defined      
 
     - name: iniciando relatorio total
       set_fact:
