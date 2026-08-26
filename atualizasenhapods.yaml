@@ -118,6 +118,7 @@
         remote_password: "{{ ansible_password }}"
       loop: "{{ hostvars[inventory_hostname]['usuarios_agrupados'] }}"
       register: dataexpirasenha_ad
+      no_log: true
 
     - name: inicializar lista todos
       set_fact:
@@ -220,7 +221,7 @@
       loop: "{{ usuarios_vencendo_com_senha }}"
       register: alteracao_senha
       when: 
-        - usuarios_vencendo is defined
+        - usuarios_vencendo_com_senha is defined
 
     - name: Atualizando Secrets
       kubernetes.core.k8s:
