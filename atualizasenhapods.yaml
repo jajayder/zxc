@@ -253,7 +253,7 @@
           'username': item.username,
           'namespace': item.namespace,
           'secret_name': item.secret_name,
-          'days_left': {{ dataexpirasenha_ad[item.username].days_left }}
+          'days_left': dataexpirasenha_ad[item.username].days_left
         } ] }}"
       loop: "{{ hostvars['10.83.103.61'].application_accounts }}"  
 
