@@ -328,7 +328,9 @@
           'secret_name': item.item.1.secret_name
         } ] }}"
       loop: "{{ secrets_updates.results }}"
-      when: not item.failed
+      when: 
+        - not item.failed
+        - usuarios_vencendo_com_senha is defined     
 
     - name: Montar HTML
       set_fact:
@@ -361,6 +363,8 @@
           </script>
           </body>
           </html>
+      when: 
+        - usuarios_vencendo_com_senha is defined    
 
     - name: Enviando email do relatorio
       community.general.mail:
