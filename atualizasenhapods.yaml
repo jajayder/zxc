@@ -8,7 +8,6 @@
 
   vars:
     applications_prefix: "^aplic-"
-    openshift_host: "{{ lookup ('env', 'K8S_AUTH_HOST') }}"
 
   tasks:
     - name: Buscar secrets
@@ -83,7 +82,17 @@
         usuarios_agrupados: "{{ usuarios_agrupados }}"
       delegate_facts: true
       delegate_to: 10.83.103.61
-
+      
+- name: Processar contas
+  hosts: windows
+  gather_facts: false
+  collections:
+    - ansible.windows
+    - microsoft.ad
+    - community.general
+  vars:
+     openshift_host: "{{ lookup ('env', 'K8S_AUTH_HOST') }}"
+  tasks:
     - name: Setando ambiente 
       set_fact:
         ambiente_ocp: >-
@@ -96,15 +105,7 @@
             else
             'OCPH2' if openshift_host is search('ocph2')
           }}
-      
-- name: Processar contas
-  hosts: windows
-  gather_facts: false
-  collections:
-    - ansible.windows
-    - microsoft.ad
-    - community.general
-  tasks:
+          
     - name: Consultar usuários
       ansible.windows.win_powershell:
         script: |
