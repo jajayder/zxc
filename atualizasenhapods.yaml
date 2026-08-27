@@ -352,13 +352,13 @@
           <body>
           {% if usuarios_vencendo_com_senha is not defined or usuarios_vencendo_com_senha | length == 0 %}
             <h5 style="background:green;color:white">
-              Olá! Nenhum usuário requer atualização de credencial :)!
+              Nenhum usuário requer atualização de credencial :)!
             </h5>
           </body>
           </html>
           {% else %}
             <h5>
-              Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias
+              Foram identificados e alterados os usuarios com expiração em até 10 dias
             </h5>
             <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
               <tr bgcolor="#D9EAD3">
