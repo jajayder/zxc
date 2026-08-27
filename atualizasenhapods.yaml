@@ -334,14 +334,20 @@
     - name: Montar HTML
       set_fact:
         html_userpods: |
+          {% if usuarios_vencendo_com_senha is not defined || usuarios_vencendo_com_senha.length == 0 %}
           <html>
           <body>
-          <script>
-            if (usuarios_vencendo_com_senha is not defined || usuarios_vencendo_com_senha.length == 0){
-              <h5 style="background:green;color:white"> Olá! Nenhum usuário requer atualização de credencial :)!</h5>
-
-            } else {
-          <h5> Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias </h5>
+          <h5 style="background:green;color:white">
+            Olá! Nenhum usuário requer atualização de credencial :)!
+          </h5>
+          </body>
+          </html>
+          {% else %}
+          <html>
+          <body>          
+          <h5>
+            Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias
+          </h5>
           <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
             <tr bgcolor="#D9EAD3">
               <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
@@ -356,15 +362,13 @@
             </tr>
             {% endfor %}
           </table>
+          <br>
           <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
           {{ relatorio_alteracoes | length }}
-                    }
-          </script>
           <br>
           </body>
           </html>
-#      when: 
-#        - usuarios_vencendo_com_senha is defined    
+          {% endif %}
 
     - name: Enviando email do relatorio
       community.general.mail:
@@ -380,7 +384,6 @@
           <br>
           ------------------------------
           <br>
-          Atualizadas:<br>
           "{{ html_userpods }}"
 #          "{{ ansible_user }}"
       delegate_to: localhost
