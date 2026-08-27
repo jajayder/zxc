@@ -334,45 +334,39 @@
     - name: Montar HTML
       set_fact:
         html_userpods: |
-          {{
-            <html>
-              <body>
-                <h5 style="background:green;color:white">
-                  Olá! Nenhum usuário requer atualização de credencial :)!
-                </h5>
-              </body>
-            </html>
-            if (
-              usuarios_vencendo_com_senha is undefined
-              or usuarios_vencendo_com_senha | length == 0
-            )
-            else
-            <html>
-              <body>          
-                <h5>
-                  Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias
-                </h5>
-                <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
-                  <tr bgcolor="#D9EAD3">
-                    <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
-                    <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
-                    <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
-                  </tr>
-                  {% for item in relatorio_alteracoes %}
-                  <tr>
-                    <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
-                    <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
-                    <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
-                  </tr>
-                  {% endfor %}
-                </table>
-                <br>
-                <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
-                {{ relatorio_alteracoes | length }}
-                <br>
-              </body>
-            </html>
-          }}
+          <html>
+          <body>
+          {% if usuarios_vencendo_com_senha is not defined or usuarios_vencendo_com_senha | length == 0 %}
+            <h5 style="background:green;color:white">
+              Olá! Nenhum usuário requer atualização de credencial :)!
+            </h5>
+          </body>
+          </html>
+          {% else %}
+            <h5>
+              Olá! Foram identificados e alterados os usuarios com expiração em até 10 dias
+            </h5>
+            <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+              <tr bgcolor="#D9EAD3">
+                <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
+                <th style="background:#8FAADC;border:1px solid #000;">Namespace</th>
+                <th style="background:#8FAADC;border:1px solid #000;">Secret</th>
+              </tr>
+              {% for item in relatorio_alteracoes %}
+              <tr>
+                <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">{{ item.username }}</td>
+                <td style="border:1px solid #000;text-align:center;">{{ item.namespace }}</td>
+                <td style="border:1px solid #000;text-align:center;">{{ item.secret_name }}</td>
+              </tr>
+              {% endfor %}
+            </table>
+            <br>
+            <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
+              {{ relatorio_alteracoes | length }}
+            <br>
+          {% endif %}  
+          </body>
+          </html>
           
     - name: Enviando email do relatorio
       community.general.mail:
