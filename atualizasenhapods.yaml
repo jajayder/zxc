@@ -8,9 +8,9 @@
 
   vars:
     applications_prefix: "^aplic-"
+    openshift_host: "{{ lookup ('env', 'K8S_AUTH_HOST') }}"
 
   tasks:
-
     - name: Buscar secrets
       kubernetes.core.k8s_info:
         api_version: v1
@@ -83,6 +83,19 @@
         usuarios_agrupados: "{{ usuarios_agrupados }}"
       delegate_facts: true
       delegate_to: 10.83.103.61
+
+    - name: Setando ambiente 
+      set_fact:
+        ambiente_ocp: >-
+          {{
+            'OCPD1' if openshift_host is search('ocpd1')
+            else
+            'OCPD2' if openshift_host is search('ocpd2')
+            else
+            'OCPH1' if openshift_host is search('ocph1')
+            else
+            'OCPH2' if openshift_host is search('ocph2')
+          }}
       
 - name: Processar contas
   hosts: windows
@@ -310,7 +323,7 @@
               </tr>
               {% endfor %}
             </table>
-            <b> TOTAL DE SECRETS EM OPCD1:</b>
+            <b> TOTAL DE SECRETS EM {{ ambiente_ocp }}:</b>
             {{ relatorio_todos | length }}
           </body>
           </html>
@@ -361,7 +374,7 @@
               {% endfor %}
             </table>
             <br>
-            <b> TOTAL DE SECRETS ATUALIZADOS EM OPCD1:</b>
+            <b> TOTAL DE SECRETS ATUALIZADOS EM {{ ambiente_ocp }}:</b>
               {{ relatorio_alteracoes | length }}
             <br>
           {% endif %}  
@@ -376,7 +389,7 @@
         from: iac-infra@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
-        subject: Relatorio de credenciais OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
+        subject: Relatorio de credenciais {{ ambiente_ocp }} - {{ now(fmt='%d/%m/%Y') }} 
         body: |
           {{ html_todosuserpods }}
           <br>
