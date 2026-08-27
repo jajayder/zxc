@@ -378,11 +378,9 @@
           - jayder.carneiro@energisaterceiros.com.br
         subject: Relatorio de credenciais OCPD1 - {{ now(fmt='%d/%m/%Y') }} 
         body: |
-          "{{ html_todosuserpods }}"
+          {{ html_todosuserpods }}
           <br>
-          ------------------------------
-          <br>
-          "{{ html_userpods }}"
+          {{ html_userpods }}
 #          "{{ ansible_user }}"
       delegate_to: localhost
       run_once: true
