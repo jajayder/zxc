@@ -305,9 +305,17 @@
     - name: Montar HTML todos
       set_fact:
         html_todosuserpods: |
-          <html>
+	        <html>
           <body>
-            <h5> Abaixo todos os usuários: </h5>
+            <h5>
+              Foi executada a rotina automatizada de monitoramento e gerenciamento de credenciais de aplicações armazenadas em Secrets do ambiente OpenShift {{ ambiente_ocp }} <br>
+			      <br>
+              Resumo da Execução:<br>
+                - Credenciais analisadas: {{ relatorio_todos | length }}<br>
+                - Credenciais renovadas automaticamente: {{ relatorio_alteracoes | length }}<br>
+                - Status de Execução: Sucesso<br>
+            <br>
+              <b>Inventário de Credenciais Monitoradas:</b></h5>
             <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
               <tr bgcolor="#D9EAD3">
                 <th style="background:#8FAADC;border:1px solid #000;">Usuario</th>
@@ -324,8 +332,6 @@
               </tr>
               {% endfor %}
             </table>
-            <b> TOTAL DE SECRETS EM {{ ambiente_ocp }}:</b>
-            {{ relatorio_todos | length }}
           </body>
           </html>
           
@@ -390,14 +396,14 @@
         from: iac-infra@energisa.com.br 
         to:
           - jayder.carneiro@energisaterceiros.com.br
-          - carlos.aquino@energisa.com.br
-          - lmauricio.dutra@energisaterceiros.com.br
-          - valeria.victor@energisa.com.br
-          - hugo@energisa.com.br
-          - carlos.andre@energisa.com.br
-          - antonio.neves@energisa.com.br
-          - john.sousa@energisa.com.br
-          - phenrique.ccosta@energisaterceiros.com.br
+#          - carlos.aquino@energisa.com.br
+#          - lmauricio.dutra@energisaterceiros.com.br
+#          - valeria.victor@energisa.com.br
+#          - hugo@energisa.com.br
+#          - carlos.andre@energisa.com.br
+#          - antonio.neves@energisa.com.br
+#          - john.sousa@energisa.com.br
+#          - phenrique.ccosta@energisaterceiros.com.br
         subject: Relatorio de credenciais {{ ambiente_ocp }} - {{ now(fmt='%d/%m/%Y') }} 
         body: |
           {{ html_todosuserpods }}
