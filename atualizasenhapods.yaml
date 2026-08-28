@@ -357,7 +357,7 @@
           <body>
           <h5><b>Inventário de Credenciais Monitoradas:</b></h5> <br>
           {% if usuarios_vencendo_com_senha is not defined or usuarios_vencendo_com_senha | length == 0 %}
-            <h5 style="background:#E8F4FD;color:white">
+            <h5 style="background:#004F8D;color:white">
               Não foram identificadas credenciais com necessidade de renovação nesta data. Todas as contas avaliadas encontram-se fora da janela definida pela política de gestão de credenciais.
             </h5>
           </body>
