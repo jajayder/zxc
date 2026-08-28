@@ -302,6 +302,21 @@
             }}
       loop: "{{ hostvars['10.83.103.61'].application_accounts }}"
 
+    - name: iniciando relatorio
+      set_fact:
+        relatorio_alteracoes: []
+        
+    - name: montando relatorio
+      set_fact:
+        relatorio_alteracoes: "{{ relatorio_alteracoes + [ {
+          'username': item.item.0.username,
+          'namespace': item.item.1.namespace,
+          'secret_name': item.item.1.secret_name
+        } ] }}"
+      loop: "{{ secrets_updates.results }}"
+      when: 
+        - usuarios_vencendo_com_senha is defined     
+
     - name: Montar HTML todos
       set_fact:
         html_todosuserpods: |
@@ -335,23 +350,7 @@
             </body>
           </html>
           
-    
-    - name: iniciando relatorio
-      set_fact:
-        relatorio_alteracoes: []
-        
-    - name: montando relatorio
-      set_fact:
-        relatorio_alteracoes: "{{ relatorio_alteracoes + [ {
-          'username': item.item.0.username,
-          'namespace': item.item.1.namespace,
-          'secret_name': item.item.1.secret_name
-        } ] }}"
-      loop: "{{ secrets_updates.results }}"
-      when: 
-        - usuarios_vencendo_com_senha is defined     
-
-    - name: Montar HTML
+    - name: Montar HTML alterados
       set_fact:
         html_userpods: |
           <html>
