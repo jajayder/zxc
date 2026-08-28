@@ -305,11 +305,11 @@
     - name: Montar HTML todos
       set_fact:
         html_todosuserpods: |
-	        <html>
+	      <html>
           <body>
             <h5>
               Foi executada a rotina automatizada de monitoramento e gerenciamento de credenciais de aplicações armazenadas em Secrets do ambiente OpenShift {{ ambiente_ocp }} <br>
-			      <br>
+			<br>
               Resumo da Execução:<br>
                 - Credenciais analisadas: {{ relatorio_todos | length }}<br>
                 - Credenciais renovadas automaticamente: {{ relatorio_alteracoes | length }}<br>
