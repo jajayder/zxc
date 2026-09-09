@@ -22,10 +22,10 @@ ocp_validate_certs: true
 aplic_user_prefix: "aplic-user-"
 
 # E-mail
-mail_host: "smtp.example.com"
+mail_host: "smtp.energisa.com.br"
 mail_port: 25
-mail_from: "ansible@example.com"
+mail_from: "iac-infra@energisa.com.br"
 mail_to:
-  - "infra@example.com"
+  - "jayder.carneiro@energisaterceiros.com.br"
 mail_cc: []
-mail_subject_prefix: "[AAP] Rotacao aplic-users"
+mail_subject_prefix: "Atualização de credenciais"
