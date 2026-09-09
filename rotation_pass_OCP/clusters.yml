@@ -1,0 +1,18 @@
+---
+# Substitua somente os endpoints pelos valores reais.
+ocp_clusters:
+  - name: ocp-dev-01
+    environment: DEV
+    api_url: "https://api.ocp-dev-01.example.com:6443"
+
+  - name: ocp-dev-02
+    environment: DEV
+    api_url: "https://api.ocp-dev-02.example.com:6443"
+
+  - name: ocp-hmg-01
+    environment: HMG
+    api_url: "https://api.ocp-hmg-01.example.com:6443"
+
+  - name: ocp-hmg-02
+    environment: HMG
+    api_url: "https://api.ocp-hmg-02.example.com:6443"
