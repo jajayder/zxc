@@ -12,7 +12,7 @@
     - name: acesso
       dellemc.openmanage.idrac_user_info:
         idrac_ip: "{{ ip_idrac }}"
-        idrac_port: 443
+#        idrac_port: 443
         idrac_user: "{{ idrac_user }}"
         idrac_password: "{{ idrac_pass }}"
         timeout: 30
