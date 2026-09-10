@@ -10,7 +10,7 @@
 
   tasks:
     - name: acesso
-      dellemc.openmanage.idrac_user_info:
+      dellemc.openmanage.idrac_system_info:
         idrac_ip: "{{ ip_idrac }}"
         idrac_port: 443
         idrac_user: "{{ idrac_user }}"
