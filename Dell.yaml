@@ -1,0 +1,24 @@
+- name: Acesso Dell
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  collections:
+    - dellemc.openmanage
+  vars:
+    ansible_python_interpreter: /usr/bin/python3.14
+
+  tasks:
+    - name: acesso
+      dellemc.openmanage.idrac_user_info:
+        idrac_ip: "{{ ip_idrac }}"
+        idrac_port: 443
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_pass }}"
+        timeout: 30
+        validate_certs: false
+      register: resultado
+
+    - debug:
+        var: resultado
+      
