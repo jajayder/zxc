@@ -71,7 +71,7 @@
           }}
         hardware:
           memory_mb: "{{ var_memory_mb * 1024 }}"
-          num_cpus: "{{ var_vcpus }}"
+          num_cpus: "{{ var_num_cpus }}"
           scsi: paravirtual
         networks:
           - name: "{{ var_vlan }}"
