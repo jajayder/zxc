@@ -199,7 +199,7 @@
   
   tasks:
     - name: Inserir ao domínio
-      ansible.windows.win_domain_membership:
+      microsoft.ad.membership:
         dns_domain_name: "{{ var_ad }}"
         hostname: "{{ hostname }}"
         domain_admin_user: "{{ ad_user }}"
