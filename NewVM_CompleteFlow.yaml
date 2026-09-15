@@ -74,9 +74,9 @@
           num_cpus: "{{ var_num_cpus }}"
           scsi: paravirtual
         networks:
-          - name: "{{ var_vlan }}"
-            network: "{{ var_vlan }}"
-            label: "{{ var_vlan }}"
+          - name: "{{ var_vlan_name }}"
+            network: "{{ var_vlan_name }}"
+            label: "{{ var_vlan_name }}"
             device_type: vmxnet3
             start_connected: true
             connected: true
