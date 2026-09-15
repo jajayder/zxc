@@ -22,8 +22,8 @@
     - name: Get URL e acesso a LAN Vmware
       community.vmware.vmware_guest:
         hostname: "{{ vmware_hosts[var_ambiente | trim] }}"
-        username: "{{ user_vmware }}"
-        password: "{{ pass_vmware }}"
+        username: 'administrator@vsphere.local' #"{{ user_vmware }}"
+        password: 'VmwareDc#1nv3nt' #"{{ pass_vmware }}"
         validate_certs: false
         name: "{{ hostname }}"
         template: >-
@@ -107,6 +107,7 @@
 
       delegate_to: localhost
       register: vm_deploy
+      no_log: true
 
     - name: Debug deploy da VM
       ansible.builtin.debug:
