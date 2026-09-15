@@ -107,7 +107,7 @@
 
       delegate_to: localhost
       register: vm_deploy
-      no_log: true
+      
 
     - name: Debug deploy da VM
       ansible.builtin.debug:
