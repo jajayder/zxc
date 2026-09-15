@@ -1,0 +1,613 @@
+- name: Deploy nova VM
+  collections:
+    - community.vmware
+    - community.general
+    - microsoft.ad
+    - ansible.windows
+  
+  vars:
+    vmware_hosts:
+       LAN 1: mgvcentaplp3.energisa.corp
+       LAN 2: mgvcentaplp6.energisa.corp
+       LAN 3: mgvcentaplp7.energisa.corp
+       OCI: vcenter-energisa-ocvs1.sddc.vcp.oci.oraclecloud.com
+       DMZ: mgvcentaplp1.dmz.energisa.corp
+       GIS: mgvcentaplp1.energisa.corp
+       GIS NP: mgvcentaplp2.energisa.corp
+       CE: cevcentaplp1.scl.corp
+       
+  hosts: all
+
+  tasks:
+    - name: Get URL e acesso a LAN Vmware
+      community.vmware.vmware_guest:
+        hostname: "{{ vmware_hosts[var_ambiente | trim] }}"
+        username: "{{ user_vmware }}"
+        password: "{{ pass_vmware }}"
+        validate_certs: false
+        name: "{{ hostname }}"
+        template: >-
+          {{
+            {
+              'Windows 2019': 'Template_Server_2019_AUTOMACAO',
+              'Windows 2022': 'Template_Server_2022_AUTOMACAO',
+              'Windows 2025': 'Template_Server_2025_AUTOMACAO'
+            }[template_name]
+          }}
+        datacenter: >-
+          {{
+            {
+              'LAN 3':'VxRail-Datacenter',
+              'OCI':'oci-w01dc',
+              'GIS':'VxRail-Datacenter',
+              'CE': 'Datacenter - Eusebio'
+            }[var_ambiente]
+          }}
+        annotation: "{{ vm_notes }}"
+        folder: >-
+          {{
+            {
+              'LAN 3':'LAN - HMG',
+              'OCI':'OCI - TST',
+              'GIS':'Automation-DEPLOYEDs'
+            }[var_ambiente]
+          }}
+        cluster: >-
+          {{ 
+            {
+              'LAN 3': 'VxRail-Virtual-SAN-Cluster-LAN3',
+              'OCI': 'oci01-w01-consolidated01-X9',
+              'GIS': 'VxRail-Virtual-SAN-Cluster-3fb472b2-9472-4f81-91d2-f11e9f8eb534'
+            }[var_ambiente]
+          }}
+        datastore: >-
+          {{ 
+            {
+              'LAN 3': 'VxRail-Virtual-SAN-Datastore-LAN3',
+              'GIS': 'VxRail-Virtual-SAN-Datastore-3fb472b2-9472-4f81-91d2-f11e9f8eb534',
+              'CE': 'vms-storage'
+            }[var_ambiente]
+          }}
+        hardware:
+          memory_mb: "{{ var_memory_mb * 1024 }}"
+          num_cpus: "{{ var_vcpus }}"
+          scsi: paravirtual
+        networks:
+          - name: "{{ var_vlan }}"
+            network: "{{ var_vlan }}"
+            label: "{{ var_vlan }}"
+            device_type: vmxnet3
+            start_connected: true
+            connected: true
+            type: static
+            ip: "{{ var_ip }}"
+            netmask: "{{ var_mask }}"
+            gateway: "{{ var_gateway }}"
+            domain: "{{ var_ad }}"
+            state: present
+        customization:
+          hostname: "{{ hostname }}"
+          domain: "{{ var_ad }}"
+          dns_servers: >-
+            {{
+              {
+                'ENERGISA.CORP': ['10.83.23.27','10.83.23.30'],
+                'SCL.CORP': ['10.83.23.26','10.83.23.32']
+              }[var_ad] 
+            }}
+          password: senha
+          timezone: "065"
+          # newsid: true
+          runonce:
+            - powershell.exe -ExecutionPolicy Unrestricted -File C:\Windows\Temp\ConfigureRemotingForAnsible.ps1 -ForceNewSSLCert -EnableCredSSP
+        wait_for_customization: true
+        state: poweredon
+        wait_for_ip_address: true
+
+      delegate_to: localhost
+      register: vm_deploy
+
+    - name: Debug deploy da VM
+      ansible.builtin.debug:
+        var: vm_deploy
+      when: vm_deploy.failed
+
+    - name: Aguardando SSH disponível
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+      register: resultadossh
+      delegate_facts: true
+      delegate_to: localhost
+
+    - name: Debug resultado SSH
+      debug:
+        msg: "{{ resultadossh }}"
+
+    - name: Validação do Deploy da VM
+      community.vmware.vmware_guest_tools_wait:
+        hostname: "{{ vmware_hosts[var_ambiente | trim] }}"
+        username: "{{ user_vmware }}"
+        password: "{{ pass_vmware }}"
+        validate_certs: false
+        name: "{{ hostname }}"
+      register: tools_status
+      until: tools_status.failed == false
+      retries: 10
+      delay: 20
+
+    - name: Adicionando no host ao inventario dinamico
+      ansible.builtin.add_host:
+        name: "{{ hostname }}"
+        groups: "DynaInvent"
+        ansible_host: "{{ var_ip }}"
+        ansible_user: "Administrator"
+        ansible_password: senha
+        ansible_connection: "winrm"
+        ansible_port: 5985
+        ansible_winrm_transport: "ntlm"
+        ansible_winrm_server_cert_validation: "ignore"
+       
+- name: Aplicando updates
+  hosts: DynaInvent
+  gather_facts: true
+  vars:
+    ansible_user: "Administrator"
+    ansible_password: "senha"
+
+  collections:
+    - ansible.windows
+
+  tasks:
+    - name: Aplicando Update do  Wndows
+      ansible.windows.win_updates:
+        category_names:
+          - CriticalUpdates
+          - SecurityUpdates
+        state: installed
+        reboot: true
+      ignore_errors: true
+      ignore_unreachable: true
+
+##################################################### NÃO DESCOMENTAR #####################
+    # - name: Setando user ativo  
+    #   set_fact:
+    #     ansible_user: "{{ item.item.user }}"
+    #     ansible_password: "{{ item.item.pass }}"
+    #   loop: "{{ gpupdate.results }}"
+    #   when:
+    #     - item.rc is defined
+    #     - item.rc == 0
+    #   no_log: true
+ 
+    # - name: Reboot host if required
+    #   ansible.windows.win_reboot:
+    #   when: update_result.reboot_required
+###########################################################################################
+
+- name: Inserindo ao domínio {{ var_ad }}
+  hosts: DynaInvent
+  gather_facts: false
+  collections:
+    - community.vmware
+    - community.general
+    - microsoft.ad
+    - ansible.windows
+
+  vars:
+    ansible_user: "Administrator"
+    ansible_password: "senha"
+  
+  tasks:
+    - name: Inserir ao domínio
+      ansible.windows.win_domain_membership:
+        dns_domain_name: "{{ var_ad }}"
+        hostname: "{{ hostname }}"
+        domain_admin_user: "{{ ad_user }}"
+        domain_admin_password: "{{ ad_pass }}"
+        domain_ou_path: >-
+          OU=Aplicacoes,
+          OU={{ var_amb_ad }},
+          OU=T1_Servers,
+          DC={{ {'ENERGISA.CORP':'ENERGISA','SCL.CORP':'SCL'}[var_ad] }},
+          DC=CORP
+        state: domain
+      register: domain_join
+      until: domain_join is success
+      retries: 5
+      delay: 10
+      when: ad_boolean == 'sim' | default(true)
+ 
+    - name: Reiniciar após entrar no domínio
+      ansible.builtin.win_reboot:
+        reboot_timeout: 600
+        connect_timeout: 15
+        pre_reboot_delay: 10
+        post_reboot_delay: 30
+        test_command: whoami
+      when:
+        - domain_join.reboot_required | default(false)
+        - ad_boolean == 'sim' | default(true)
+ 
+    - name: Validar ingresso no domínio
+      win_shell: "(Get-WmiObject Win32_ComputerSystem).Domain"
+      register: domain_check
+      when: ad_boolean == 'sim' | default(true)
+ 
+    - name: Mostrar domínio atual
+      debug:
+        msg: "Host está no domínio: {{ domain_check.stdout }}"
+      when: ad_boolean == 'sim' | default(true)
+
+    - name: aguardar restart
+      ansible.windows.win_reboot:
+        msg: "Aguardando restart SO"
+        post_reboot_delay: 60        
+        reboot_timeout: 600
+        msg: "Aguardando restart do SO"
+
+##################################################### NÃO DESCOMENTAR #####################
+# - name: GPUpdate Command
+#   hosts: DynaInvent
+#   gather_facts: no
+#   vars:
+#     credenciais:
+#       - user: "Administrator"
+#         pass: "senha"
+#       - user: "{{ ad_user }}"
+#         pass: "{{ ad_pass }}"
+#       - user: "{{ ad_np_user }}"
+#         pass: "{{ ad_np_pass }}"
+
+#   tasks:
+#     - name: Run gpupdate
+#       ansible.windows.win_shell: gpupdate /force /boot
+#       vars:
+#         ansible_user: "{{ item.user }}"
+#         ansible_password: "{{ item.pass }}"
+#         ansible_connection: winrm
+#         ansible_winrm_server_cert_validation: ignore
+#       loop: "{{ credenciais }}"
+#       register: gpupdate
+#       ignore_errors: true
+#       ignore_unreachable: true
+#       no_log: true
+
+#     - name: Setando user ativo
+#       set_fact:
+#         ansible_user: "{{ item.item.user }}"
+#         ansible_password: "{{ item.item.pass }}"
+#       loop: "{{ gpupdate.results }}"
+#       when:
+#         - item.rc is defined
+#         - item.rc == 0
+#       no_log: true
+##################################################### NÃO DESCOMENTAR #####################      
+
+- name: Alterando usuario 
+  hosts: DynaInvent
+  gather_facts: false
+  tasks:
+    - set_fact:
+        ad_user: "{{ ad_np_user }}"
+        ad_pass: "{{ ad_np_pass }}"
+      when: var_amb_ad != 'Production'
+      
+- name: Criando C:\TEMP directory exists
+  hosts: DynaInvent
+  gather_facts: no
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Criando C:\Temp    
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+  
+- name: Ativando SO
+  hosts: DynaInvent
+  gather_facts: no
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+
+  tasks:
+    - name: Set new Windows product key
+      ansible.windows.win_shell: |
+        {{
+          { 
+            'Windows 2022': 'cscript.exe //nologo C:\Windows\System32\slmgr.vbs /ipk YNDTC-D3JH8-4QK99-VQRCJ-F3PX8',
+            'Windows 2025': 'cscript.exe //nologo C:\Windows\System32\slmgr.vbs /ipk NYRT9-JRDKR-FJVKB-9CGGR-9W7BD'
+          }[template_name]
+        }}    
+        cscript.exe //nologo C:\Windows\System32\slmgr.vbs /ato
+      when: template_name == 'Windows 2022' or template_name == 'Windows 2025'
+
+- name: Timezone e Region
+  hosts: DynaInvent
+  gather_facts: no
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Configure Windows region
+      community.windows.win_region:
+        location: 32              # Código da região: Brazil
+        format: "pt-BR"           # Formato de exibição regional
+        copy_settings: true       # Copiar configurações para tela de login e novos usuários
+
+- name: Reunindo Informações e Agents Installs
+  hosts: DynaInvent
+  gather_facts: no
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Copiando Instaladores
+      ansible.windows.win_powershell:
+        script: |
+          net use Z: \\fileserver.scl.corp\dsl\02_APLICATIVOS\_TempNewVM /user:{{ ad_user }} {{ ad_pass }}
+          robocopy Z:\ C:\temp\ /e
+          net use Z: /delete
+
+
+- name: Instalando SCCM
+  hosts: DynaInvent
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Block install SCCM
+      block:
+        - name: Instalando SCCM
+          ansible.windows.win_command: C:\\temp\\Client_SCCM_Install_Local.bat
+          args:
+            chdir: C:\\temp\\
+      when: var_sccm == 'sim' | default(false)
+
+
+- name: Instalando Qualys
+  hosts: DynaInvent
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Instalando Qualys
+      include_tasks: tasks_newvm/install_qualys.yaml
+      when: var_qualys == 'sim' | default(false)
+
+- name: Instalando MMA
+  hosts: DynaInvent
+  gather_facts: no
+  vars:
+    workspace_id: "08d52ffe-0b4d-4d24-8b31-eb6d60ddb0b2"
+    workspace_key: "eDKvib67OWdMMBVOebzS2h96coFXiS9/5OjMDjtlC/UFAKX0+PtDbycmQurQNXVVBdyD9fvkpS9mTT1JlYaESQ=="
+    mma_download_url: "https://go.microsoft.com/fwlink/?LinkID=828603"
+    mma_installer_path: "C:\\temp\\MMASetup-AMD64.exe"
+    mma_extract_path: "C:\\temp\\MMAExtract"
+    ansible_user: "{{ ad_user if var_amb_ad == 'Production' else ad_np_user }}"
+    ansible_password: "{{ ad_pass if var_amb_ad == 'Production' else ad_np_pass }}"
+  tasks:
+    - name: bloco install MMA
+      block:
+        - name: Baixar o instalador do MMA
+          ansible.windows.win_get_url:
+            url: "{{ mma_download_url }}"
+            dest: "{{ mma_installer_path }}"
+            validate_certs: no
+
+        - name: Extrair e instalar Microsoft Monitoring Agent
+          ansible.windows.win_shell: |
+            C:\temp\MMASetup-AMD64.exe /Q /C /T:C:\temp\MMAExtract
+
+        - name: Instalar Microsoft Monitoring Agent
+          ansible.windows.win_shell: |
+            Start-Process -FilePath C:\\temp\\MMAExtract\\Setup.exe `
+            -ArgumentList '"/qn ADD_OPINSIGHTS_WORKSPACE=1 OPINSIGHTS_WORKSPACE_ID="{{ workspace_id }}" OPINSIGHTS_WORKSPACE_KEY="{{ workspace_key }}" AcceptEndUserLicenseAgreement=1"' `
+            -Wait
+          args:
+            executable: powershell.exe
+      when: var_mma == 'sim' | default(false)
+
+- name: Instalando Defender
+  collections:
+    - community.windows
+    - ansible.windows
+  hosts: DynaInvent
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Bloco install Defender
+      block:
+        - name: Instalando Defender
+          ansible.windows.win_shell: echo Y | C:\temp\WindowsDefenderATPLocalOnboardingScript_2019-2025.cmd
+      when: var_defender == 'sim' | default(false)
+
+- name: Validando instaladores
+  collections:
+    - community.windows
+    - ansible.windows
+  hosts: DynaInvent
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Validando instaladores
+      ansible.windows.win_powershell:
+        script: |
+          $installers = Get-Proccess -Name "msiexec", "Setup" -ErrorAction SilentlyContinue
+          return [bool]$installers
+      register: active_installer
+      until: active_installer.output[0] == false
+      retries: 30
+      delay: 10
+
+- name: aguardando conclusão do installer
+  hosts: DynaInvent
+  gather_facts: no
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: encerrando msiecec
+      ansible.windows.win_shell: |
+        Get-Process msiexec -ErrorAction SilentlyContinue | Stop-Process -Force
+    - name: aguardando conclusão do installer
+      ansible.windows.win_shell: |
+        if (Get-Process msiexec -ErrorAction SilentlyContinue) {
+          exit 1
+        }
+        exit 0
+      register: msiexec_status
+      retries: 10
+      delay: 10
+      until: msiexec_status.rc == 0
+      changed_when: false
+
+- name: install agent Zabbix
+  collections:
+    - community.windows
+    - ansible.windows
+  hosts: DynaInvent
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Bloco install Zabbix
+      block:
+        - name: variavel zabbix
+          ansible.windows.win_environment:
+            name: zabbix_server_ip
+            value: '10.83.104.76,10.83.190.4,10.83.190.5'
+            state: present
+            level: machine
+
+        - name: instala agente zabbix
+          ansible.windows.win_command: C:\\temp\\zabbix_agent2-7.0.25_install.bat
+          args:
+            chdir: C:\temp\
+    
+        - name: Altera restart service recovery
+          ansible.windows.win_shell: |
+            sc.exe failure "Zabbix Agent 2" reset= 86400 actions= restart/120000/restart/120000/restart/120000
+      when: var_zabbix == 'sim' | default(false)
+
+- name: Limpando Instaladores
+  hosts: DynaInvent
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  tasks:
+    - name: Limpando Instaladores  
+      ansible.windows.win_file:
+        path: C:\temp
+        state: absent
+      ignore_errors: true
+      ignore_unreachable: true
+
+
+    - name: Limpando Instaladores  
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+
+- name: Form de Inclusão  
+  hosts: all
+  collections:
+    - community.windows
+    - ansible.windows
+    - community.general
+  vars:
+     ansible_user: "{{ ad_user }}"
+     ansible_password: "{{ ad_pass }}"
+  
+  tasks:          
+    - name: Send e-mail
+      community.general.notification.mail:
+        host: mail.energisa.com.br 
+        #port: 587
+        port: 25
+        subtype: html
+        subject: CONTROLE INICIAL DE SERVIDORES CRIADOS - {{ now(fmt='%d/%m/%Y') }} 
+        body: |
+          Olá!
+          Segue notificação do novo servidor incluído em nossa infraestrutura, {{ hostname }} via automação AWX
+          <!DOCTYPE html>
+          <html>
+          <head>
+          <meta chearset="UTF-8">
+          </head>
+          <body>
+            <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%">
+            <thead>
+              <tr>
+              <th style="background:#8FAADC;border:1px solid #000;">Ação</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Chamado PRATICA</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Nome do Servidor</th>
+              <th style="background:#8FAADC;border:1px solid #000;">IP</th>
+              <th style="background:#8FAADC;border:1px solid #000;">SITE</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Tipo</th>
+              <th style="background:#92D050;border:1px solid #000;">Ambiente</th>
+              <th style="background:#8FAADC;border:1px solid #000;">SO</th>
+              <th style="background:#92D050;border:1px solid #000;">Tipo de Máquina</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Descrição do Serviço</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Motivo</th>
+              <th style="background:#C9DA2D;border:1px solid #000;">SCCM Restart</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Analista Responsável INFRA</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Equipe Responsável</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Analista Responsável APLICAÇÃO</th>
+              <th style="background:#8FAADC;border:1px solid #000;">Área Gestora</th>
+              <th colspan="5" style="background:#E6A57A;border:1px solid #000;">Servidor Físico - Complemento</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+              <td style="background:#00B050;color:white;border:1px solid #000;text-align:center;">Inclusão</td>
+              <td style="border:1px solid #000;text-align:center;">{{ num_chamado }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ hostname }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_ip }}</td>
+              <td style="border:1px solid #000;text-align:center;">DC Corp</td>
+              <td style="border:1px solid #000;text-align:center;">Virtual</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_amb_ad }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ template_name }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_vmtype }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ vm_notes }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_motivo }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_sccmrestart }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_infraanalista }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_equiperesp }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_analistaapp }}</td>
+              <td style="border:1px solid #000;text-align:center;">{{ var_areagestora }}</td>
+              <td style="border:1px solid #000;text-align:center;"></td>
+              <td style="border:1px solid #000;text-align:center;"></td>
+              <td style="border:1px solid #000;text-align:center;"></td>
+              <td style="border:1px solid #000;text-align:center;"></td>
+              <td style="border:1px solid #000;text-align:center;"></td>
+              </tr>
+            </tbody>
+            </table>
+            <table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;width:100%;text-align:center;margin-top: 4px;">
+            <tbody>
+              <tr>
+              <td style="background:#ffd700;"><b>Provisioning User:</b> {{ ansible_user }}		|		<b>vCenter:</b> {{ var_ambiente }}		|		<b>Domain:</b> {{ var_ad }}		|		<b>Agentes do Baseline Instalados:</b> <b>SCCM:</b> {{ var_sccm }} - <b>Qualys:</b> {{ var_qualys }} - <b>MMA:</b> {{ var_mma }} - <b>Defender:</b> {{ var_defender }} - <b>Zabbix:</b> {{ var_zabbix }} </td>
+              </tr>
+            </tbody>
+            </table>
+          </body>
+          </html>
+        from: awx@energisa.com.br 
+        to:
+          - valeria.victor@energisa.com.br
+          - lmauricio.dutra@energisaterceiros.com.br
+          - jayder.carneiro@energisaterceiros.com.br
+          - leandro.rocha@energisaterceiros.com.br
+          - suporte.datacenter@energisa.com.br
+          - Suportedatacenter.infraestrutura@energisa.com.br
+          - suporte.datacenter.aplicacao@energisa.com.br
+          - suporte.infraestrutura.m365-ad@energisa.com.br
+          - suporte.datacenter.citrix@energisa.com.br
+          - equipe.monitoracao@energisa.com.br
+          - gitic-backup@energisa.com.br
+      delegate_to: localhost
+      run_once: true
