@@ -10,7 +10,7 @@
        LAN 1: mgvcentaplp3.energisa.corp
        LAN 2: mgvcentaplp6.energisa.corp
        LAN 3: mgvcentaplp7.energisa.corp
-       OCI: vcenter-energisa-ocvs1.sddc.vcp.oci.oraclecloud.com
+       OCI: vcenter-energisa-ocvs-1.sddc.vcp.oci.oraclecloud.com
        DMZ: mgvcentaplp1.dmz.energisa.corp
        GIS: mgvcentaplp1.energisa.corp
        GIS NP: mgvcentaplp2.energisa.corp
