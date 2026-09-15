@@ -65,7 +65,8 @@
             {
               'LAN 3': 'VxRail-Virtual-SAN-Datastore-LAN3',
               'GIS': 'VxRail-Virtual-SAN-Datastore-3fb472b2-9472-4f81-91d2-f11e9f8eb534',
-              'CE': 'vms-storage'
+              'CE': 'vms-storage',
+              'OCI': 'workload-02'
             }[var_ambiente]
           }}
         hardware:
